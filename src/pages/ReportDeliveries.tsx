@@ -6,6 +6,8 @@ import {
   Send,
   CheckCircle2,
   TrendingUp,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useEventContext } from '@/contexts/event-context'
 import {
@@ -27,6 +29,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { downloadCsv, downloadXlsx } from '@/lib/export-utils'
+import { useToast } from '@/hooks/use-toast'
 import {
   Table,
   TableBody,
@@ -106,6 +111,8 @@ export default function ReportDeliveries() {
   const [loading, setLoading] = useState(true)
   const [detailCampaign, setDetailCampaign] = useState<CampaignRecord | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [exporting, setExporting] = useState<'csv' | 'xlsx' | null>(null)
+  const { toast } = useToast()
 
   const loadData = useCallback(async () => {
     if (!selectedEvent?.id) {
@@ -168,6 +175,50 @@ export default function ReportDeliveries() {
     }
   }, [campaigns, logsMap])
 
+  const handleExport = async (format: 'csv' | 'xlsx') => {
+    if (campaigns.length === 0) {
+      toast({ title: 'Nenhum dado encontrado para exportar.' })
+      return
+    }
+    setExporting(format)
+    await new Promise((r) => setTimeout(r, 50))
+    try {
+      const headers = [
+        'Nome da Campanha',
+        'Mailing (Lista)',
+        'Status',
+        'Enviados',
+        'Entregues',
+        'Abertos',
+        'Cliques',
+        'Taxa de Abertura (%)',
+        'Taxa de Cliques (%)',
+      ]
+      const rows = campaigns.map((c) => {
+        const m = computeMetrics(logsMap[c.id] || [])
+        const st = statusConfig[c.status || 'rascunho'] || statusConfig.rascunho
+        return [
+          c.name,
+          c.expand?.event?.name || selectedEvent?.name || '',
+          st.label,
+          m.enviados,
+          m.entregues,
+          m.abertos,
+          m.totalCliques,
+          `${m.taxaAbertura.toFixed(1)}%`,
+          `${m.taxaCliques.toFixed(1)}%`,
+        ]
+      })
+      if (format === 'csv') downloadCsv('relatorio-entregas', headers, rows)
+      else downloadXlsx('relatorio-entregas', headers, rows)
+      toast({ title: 'Arquivo exportado com sucesso!' })
+    } catch {
+      toast({ title: 'Erro ao exportar arquivo.' })
+    } finally {
+      setExporting(null)
+    }
+  }
+
   const handleRowClick = (c: CampaignRecord) => {
     setDetailCampaign(c)
     setDetailOpen(true)
@@ -194,18 +245,52 @@ export default function ReportDeliveries() {
             {selectedEvent ? selectedEvent.name : 'Nenhum mailing (lista) selecionado'}
           </p>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px] h-9 text-xs">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="rascunho">Rascunho</SelectItem>
-            <SelectItem value="enviando">Enviando</SelectItem>
-            <SelectItem value="enviado">Enviado</SelectItem>
-            <SelectItem value="parcialmente_falhou">Parcial</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px] h-9 text-xs">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="rascunho">Rascunho</SelectItem>
+              <SelectItem value="enviando">Enviando</SelectItem>
+              <SelectItem value="enviado">Enviado</SelectItem>
+              <SelectItem value="parcialmente_falhou">Parcial</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1.5"
+            disabled={exporting !== null || campaigns.length === 0}
+            onClick={() => handleExport('csv')}
+          >
+            {exporting === 'csv' ? (
+              <span className="animate-pulse">Gerando...</span>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                <span>CSV</span>
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs gap-1.5"
+            disabled={exporting !== null || campaigns.length === 0}
+            onClick={() => handleExport('xlsx')}
+          >
+            {exporting === 'xlsx' ? (
+              <span className="animate-pulse">Gerando...</span>
+            ) : (
+              <>
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Excel</span>
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
