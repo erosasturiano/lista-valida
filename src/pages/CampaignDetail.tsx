@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Send, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle2, XCircle, Clock, Trash2, BarChart3 } from 'lucide-react'
 import {
   getCampaign,
   getCampaignLogs,
@@ -109,14 +109,22 @@ export default function CampaignDetail() {
             </p>
           </div>
         </div>
-        <Button
-          variant="destructive"
-          size="icon"
-          onClick={() => setConfirmDelete(true)}
-          className="h-8 w-8"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-8">
+            <Link to="/relatorio-entregas">
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Relatório</span>
+            </Link>
+          </Button>
+          <Button
+            variant="destructive"
+            size="icon"
+            onClick={() => setConfirmDelete(true)}
+            className="h-8 w-8"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

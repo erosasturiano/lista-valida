@@ -9,6 +9,7 @@ import {
   X,
   Mail,
   FileText,
+  BarChart3,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     { label: 'Importar', path: '/importar', icon: Upload },
     { label: 'Modelos de E-mail', path: '/modelos', icon: FileText },
     { label: 'Campanhas', path: '/campanhas', icon: Mail },
+    { label: 'Relatório de Entregas', path: '/relatorio-entregas', icon: BarChart3 },
     { label: 'Mailing (listas)', path: '/eventos', icon: Calendar },
   ]
 

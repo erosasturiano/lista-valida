@@ -9,6 +9,7 @@ import {
   Upload,
   ArrowRight,
   Play,
+  BarChart3,
 } from 'lucide-react'
 import { useEventContext } from '@/contexts/event-context'
 import { getContacts, classifyContact, ContactRecord } from '@/services/contacts'
@@ -165,6 +166,12 @@ export default function Dashboard() {
             {selectedEvent ? selectedEvent.name : 'Nenhum mailing (lista) selecionado'}
           </p>
         </div>
+        <Button asChild variant="outline" size="sm" className="text-xs gap-1.5">
+          <Link to="/relatorio-entregas">
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Relatório de Entregas</span>
+          </Link>
+        </Button>
       </div>
 
       {/* KPI Cards Row */}

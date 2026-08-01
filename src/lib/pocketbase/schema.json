@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T21:18:07.347Z",
+  "generatedAt": "2026-08-01T21:37:48.148Z",
   "collections": [
     {
       "name": "users",
@@ -450,11 +450,31 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "opened_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "clicked_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "click_count",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_email_logs_campaign ON email_logs (campaign)",
-        "CREATE INDEX idx_email_logs_status ON email_logs (status)"
+        "CREATE INDEX idx_email_logs_status ON email_logs (status)",
+        "CREATE INDEX `idx_email_logs_opened_at` ON `email_logs` (opened_at)",
+        "CREATE INDEX `idx_email_logs_clicked_at` ON `email_logs` (clicked_at)"
       ]
     },
     {

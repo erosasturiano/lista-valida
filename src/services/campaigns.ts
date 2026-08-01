@@ -32,12 +32,30 @@ export interface EmailLogRecord {
   status: 'enviado' | 'falhou'
   error_message?: string
   sent_at?: string
+  opened_at?: string
+  clicked_at?: string
+  click_count?: number
   created: string
   updated: string
 }
 
 export const getCampaigns = async (eventId?: string): Promise<CampaignRecord[]> => {
   const filter = eventId ? `event = "${eventId}"` : ''
+  return pb.collection('email_campaigns').getFullList<CampaignRecord>({
+    filter,
+    sort: '-created',
+    expand: 'event',
+  })
+}
+
+export const getReportCampaigns = async (
+  eventId?: string,
+  status?: string,
+): Promise<CampaignRecord[]> => {
+  const filters: string[] = []
+  if (eventId) filters.push(`event = "${eventId}"`)
+  if (status) filters.push(`status = "${status}"`)
+  const filter = filters.length > 0 ? filters.join(' && ') : ''
   return pb.collection('email_campaigns').getFullList<CampaignRecord>({
     filter,
     sort: '-created',

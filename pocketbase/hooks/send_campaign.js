@@ -48,6 +48,13 @@ routerAdd(
 
     const logsCol = $app.findCollectionByNameOrId('email_logs')
 
+    var baseUrl = $secrets.get('PB_INSTANCE_URL') || ''
+    if (!baseUrl) {
+      var proto = e.request.header.get('X-Forwarded-Proto') || 'https'
+      baseUrl = proto + '://' + e.request.host
+    }
+    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
+
     campaign.set('status', 'enviando')
     $app.save(campaign)
 
@@ -83,7 +90,19 @@ routerAdd(
         log.set('body', body)
         log.set('status', 'enviado')
         log.set('sent_at', new Date().toISOString())
+        log.set('click_count', 0)
         $app.save(log)
+
+        var trackClickBase = baseUrl + '/backend/v1/track-click/' + log.id + '?url='
+        var trackedBody = body.replace(/href=["'](https?:\/\/[^"']+)["']/gi, function (match, url) {
+          return 'href="' + trackClickBase + encodeURIComponent(url) + '"'
+        })
+        var pixelUrl = baseUrl + '/backend/v1/track-open/' + log.id
+        trackedBody +=
+          '<img src="' + pixelUrl + '" width="1" height="1" alt="" style="display:none;" />'
+        log.set('body', trackedBody)
+        $app.save(log)
+
         sent++
       } catch (err) {
         var log = new Record(logsCol)
