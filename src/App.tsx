@@ -5,6 +5,10 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/hooks/use-auth'
 import Index from './pages/Index'
+import Dashboard from './pages/Dashboard'
+import Contacts from './pages/Contacts'
+import ContactDetail from './pages/ContactDetail'
+import Import from './pages/Import'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -18,9 +22,12 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+          <Route path="/" element={<Index />} />
           <Route element={<Layout />}>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES MUST BE ADDED HERE */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/contatos" element={<Contacts />} />
+            <Route path="/contatos/:id" element={<ContactDetail />} />
+            <Route path="/importar" element={<Import />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

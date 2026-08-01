@@ -86,6 +86,7 @@ export interface ImportResult {
   imported: number
   skipped: number
   errors: Array<{ row: number; reason: string }>
+  imported_ids?: string[]
 }
 
 export const importContacts = async (

@@ -1,17 +1,18 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
-  Upload,
   FileSpreadsheet,
-  CheckCircle2,
-  AlertTriangle,
   ArrowRight,
   ArrowLeft,
   Download,
   Plus,
+  Sparkles,
+  CheckCircle2,
 } from 'lucide-react'
 import { useEventContext } from '@/contexts/event-context'
-import { importContacts, createEvent } from '@/services/contacts'
+import { importContacts, classifyContact } from '@/services/contacts'
+import { createEvent } from '@/services/events'
+import { parseXLSXFile } from '@/lib/xlsx-parser'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,18 +43,15 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 
+const TARGET_EVENT_NAME = 'Evento DHO-7235a'
+
 export default function Import() {
   const { events, selectedEventId, refreshEvents, setSelectedEventId } = useEventContext()
-  const navigate = useNavigate()
   const { toast } = useToast()
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
-
-  // Raw file data
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [csvRows, setCsvRows] = useState<string[][]>([])
-
-  // Column Mapping
   const [mapping, setMapping] = useState<{
     name: string
     email: string
@@ -72,24 +70,67 @@ export default function Import() {
     has_degree: '',
   })
 
-  // Settings
   const [targetEventId, setTargetEventId] = useState<string>(selectedEventId || '')
   const [allowDuplicates, setAllowDuplicates] = useState<boolean>(false)
-
-  // New Event Modal
   const [newEventOpen, setNewEventOpen] = useState(false)
   const [newEventName, setNewEventName] = useState('')
 
-  // Processing & Results
   const [importing, setImporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
   const [importReport, setImportReport] = useState<{
     imported: number
     skipped: number
     errors: Array<{ row: number; reason: string }>
+    imported_ids?: string[]
   } | null>(null)
 
-  // Parse CSV File
+  const [classifying, setClassifying] = useState(false)
+  const [classifyProgress, setClassifyProgress] = useState(0)
+  const [classifiedCount, setClassifiedCount] = useState(0)
+  const [totalToClassify, setTotalToClassify] = useState(0)
+
+  const [eventEnsured, setEventEnsured] = useState(false)
+
+  useEffect(() => {
+    if (eventEnsured || events.length === 0) return
+    const existing = events.find((e) => e.name === TARGET_EVENT_NAME)
+    if (existing) {
+      setTargetEventId(existing.id)
+      setEventEnsured(true)
+    } else {
+      createEvent({ name: TARGET_EVENT_NAME })
+        .then(async (created) => {
+          await refreshEvents()
+          setTargetEventId(created.id)
+          setEventEnsured(true)
+        })
+        .catch(() => setEventEnsured(true))
+    }
+  }, [events, eventEnsured, refreshEvents])
+
+  const handleParsedData = (headers: string[], dataRows: string[][]) => {
+    if (headers.length === 0 || dataRows.length === 0) {
+      toast({
+        title: 'Arquivo inválido',
+        description: 'O arquivo precisa ter pelo menos um cabeçalho e uma linha de dados.',
+      })
+      return
+    }
+    setCsvHeaders(headers)
+    setCsvRows(dataRows)
+    const autoMap = {
+      name: headers.find((h) => /nome/i.test(h)) || '',
+      email: headers.find((h) => /e-?mail/i.test(h)) || '',
+      phone: headers.find((h) => /tel|fone|celular/i.test(h)) || '',
+      company: headers.find((h) => /empresa|organiza/i.test(h)) || '',
+      raw_role: headers.find((h) => /cargo|fun\u00e7\u00e3o/i.test(h)) || '',
+      rsvp: headers.find((h) => /rsvp|confirma/i.test(h)) || '',
+      has_degree: headers.find((h) => /diploma|gradua/i.test(h)) || '',
+    }
+    setMapping(autoMap)
+    setStep(2)
+  }
+
   const parseCSV = (content: string) => {
     const lines = content.split(/\r\n|\n/).filter((l) => l.trim().length > 0)
     if (lines.length < 2) {
@@ -99,42 +140,40 @@ export default function Import() {
       })
       return
     }
-
-    // Detect Delimiter (comma vs semicolon)
     const firstLine = lines[0]
     const delimiter = firstLine.includes(';') ? ';' : ','
-
     const headers = firstLine.split(delimiter).map((h) => h.replace(/^"|"$/g, '').trim())
     const dataRows = lines
       .slice(1)
       .map((line) => line.split(delimiter).map((c) => c.replace(/^"|"$/g, '').trim()))
-
-    setCsvHeaders(headers)
-    setCsvRows(dataRows)
-
-    // Auto-map columns if header names match
-    const autoMap = {
-      name: headers.find((h) => /nome/i.test(h)) || '',
-      email: headers.find((h) => /e-?mail/i.test(h)) || '',
-      phone: headers.find((h) => /tel|fone|celular/i.test(h)) || '',
-      company: headers.find((h) => /empresa|organiza/i.test(h)) || '',
-      raw_role: headers.find((h) => /cargo|função/i.test(h)) || '',
-      rsvp: headers.find((h) => /rsvp|confirma/i.test(h)) || '',
-      has_degree: headers.find((h) => /diploma|gradua/i.test(h)) || '',
-    }
-    setMapping(autoMap)
-    setStep(2)
+    handleParsedData(headers, dataRows)
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const text = event.target?.result as string
-      parseCSV(text)
+    const name = file.name.toLowerCase()
+    if (name.endsWith('.csv')) {
+      const reader = new FileReader()
+      reader.onload = (event) => parseCSV(event.target?.result as string)
+      reader.readAsText(file)
+    } else if (name.endsWith('.xlsx')) {
+      try {
+        const { headers, rows } = await parseXLSXFile(file)
+        handleParsedData(headers, rows)
+      } catch {
+        toast({
+          title: 'Erro ao processar XLSX',
+          description: 'Não foi possível ler o arquivo.',
+        })
+      }
+    } else {
+      toast({
+        title: 'Formato não suportado',
+        description: 'Envie um arquivo .csv ou .xlsx',
+      })
     }
-    reader.readAsText(file)
+    e.target.value = ''
   }
 
   const handleCreateNewEvent = async () => {
@@ -147,7 +186,7 @@ export default function Import() {
       setNewEventOpen(false)
       setNewEventName('')
       toast({ title: 'Evento criado com sucesso!' })
-    } catch (err) {
+    } catch {
       toast({ title: 'Erro ao criar evento.' })
     }
   }
@@ -168,23 +207,18 @@ export default function Import() {
     setStep(3)
     setImporting(true)
     setImportProgress(20)
+    setImportReport(null)
+    setClassifiedCount(0)
 
-    const nameIdx = csvHeaders.indexOf(mapping.name)
-    const emailIdx = csvHeaders.indexOf(mapping.email)
-    const phoneIdx = csvHeaders.indexOf(mapping.phone)
-    const companyIdx = csvHeaders.indexOf(mapping.company)
-    const roleIdx = csvHeaders.indexOf(mapping.raw_role)
-    const rsvpIdx = csvHeaders.indexOf(mapping.rsvp)
-    const degreeIdx = csvHeaders.indexOf(mapping.has_degree)
-
+    const idx = (key: string) => csvHeaders.indexOf(key)
     const payload = csvRows.map((row) => ({
-      name: nameIdx >= 0 ? row[nameIdx] : '',
-      email: emailIdx >= 0 ? row[emailIdx] : '',
-      phone: phoneIdx >= 0 ? row[phoneIdx] : '',
-      company: companyIdx >= 0 ? row[companyIdx] : '',
-      raw_role: roleIdx >= 0 ? row[roleIdx] : '',
-      rsvp: rsvpIdx >= 0 ? row[rsvpIdx] : '',
-      has_degree: degreeIdx >= 0 ? row[degreeIdx] : '',
+      name: idx(mapping.name) >= 0 ? row[idx(mapping.name)] : '',
+      email: idx(mapping.email) >= 0 ? row[idx(mapping.email)] : '',
+      phone: idx(mapping.phone) >= 0 ? row[idx(mapping.phone)] : '',
+      company: idx(mapping.company) >= 0 ? row[idx(mapping.company)] : '',
+      raw_role: idx(mapping.raw_role) >= 0 ? row[idx(mapping.raw_role)] : '',
+      rsvp: idx(mapping.rsvp) >= 0 ? row[idx(mapping.rsvp)] : '',
+      has_degree: idx(mapping.has_degree) >= 0 ? row[idx(mapping.has_degree)] : '',
     }))
 
     setImportProgress(60)
@@ -194,7 +228,31 @@ export default function Import() {
       setImportReport(result)
       setImportProgress(100)
       toast({ title: 'Importação concluída!' })
-    } catch (err) {
+
+      const ids = result.imported_ids || []
+      if (ids.length > 0) {
+        setTotalToClassify(ids.length)
+        setClassifying(true)
+        setClassifyProgress(0)
+        setClassifiedCount(0)
+        let count = 0
+        for (let i = 0; i < ids.length; i++) {
+          try {
+            await classifyContact(ids[i])
+            count++
+            setClassifiedCount(count)
+          } catch (err) {
+            console.error('Classification failed:', err)
+          }
+          setClassifyProgress(Math.round(((i + 1) / ids.length) * 100))
+        }
+        setClassifying(false)
+        toast({
+          title: 'Classificação IA concluída!',
+          description: `${count} contatos classificados com sucesso!`,
+        })
+      }
+    } catch {
       toast({ title: 'Erro durante a importação.' })
     } finally {
       setImporting(false)
@@ -215,49 +273,51 @@ export default function Import() {
     link.click()
   }
 
+  const renderColumnSelect = (key: keyof typeof mapping, label: string, required?: boolean) => (
+    <div className="space-y-1">
+      <Label className="text-xs font-semibold">
+        {label} {required && '*'}
+      </Label>
+      <Select value={mapping[key]} onValueChange={(val) => setMapping({ ...mapping, [key]: val })}>
+        <SelectTrigger className="h-9 text-xs">
+          <SelectValue placeholder="Selecione a coluna" />
+        </SelectTrigger>
+        <SelectContent>
+          {csvHeaders.map((h) => (
+            <SelectItem key={h} value={h} className="text-xs">
+              {h}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Importar Mailing de Evento
-          </h1>
-          <p className="text-xs text-slate-500">
-            Envie e mapeie sua planilha para higienização e classificação automática
-          </p>
-        </div>
+      <div className="border-b border-slate-200 pb-4">
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          Importar Mailing de Evento
+        </h1>
+        <p className="text-xs text-slate-500">
+          Envie planilhas CSV ou XLSX para higienização e classificação automática com IA
+        </p>
       </div>
 
-      {/* Stepper Header */}
       <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold border-b border-slate-200 pb-3">
-        <div
-          className={`flex items-center justify-center gap-1.5 ${step === 1 ? 'text-indigo-600 border-b-2 border-indigo-600 pb-2' : 'text-slate-400'}`}
-        >
-          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px]">
-            1
-          </span>
-          <span>1. Envio do CSV</span>
-        </div>
-        <div
-          className={`flex items-center justify-center gap-1.5 ${step === 2 ? 'text-indigo-600 border-b-2 border-indigo-600 pb-2' : 'text-slate-400'}`}
-        >
-          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px]">
-            2
-          </span>
-          <span>2. Mapeamento</span>
-        </div>
-        <div
-          className={`flex items-center justify-center gap-1.5 ${step === 3 ? 'text-indigo-600 border-b-2 border-indigo-600 pb-2' : 'text-slate-400'}`}
-        >
-          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px]">
-            3
-          </span>
-          <span>3. Resultado</span>
-        </div>
+        {['1. Envio do arquivo', '2. Mapeamento', '3. Resultado'].map((label, i) => (
+          <div
+            key={label}
+            className={`flex items-center justify-center gap-1.5 ${step === i + 1 ? 'text-indigo-600 border-b-2 border-indigo-600 pb-2' : 'text-slate-400'}`}
+          >
+            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px]">
+              {i + 1}
+            </span>
+            <span>{label}</span>
+          </div>
+        ))}
       </div>
 
-      {/* STEP 1: Upload */}
       {step === 1 && (
         <Card className="border-slate-200 shadow-xs">
           <CardHeader>
@@ -265,22 +325,19 @@ export default function Import() {
               Selecione o arquivo da sua planilha
             </CardTitle>
             <CardDescription className="text-xs">
-              Exporte sua planilha para o formato <strong>CSV</strong> (separado por vírgula ou
-              ponto e vírgula) antes de enviar.
+              Formatos suportados: <strong>CSV</strong> e <strong>XLSX</strong> (Excel)
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent>
             <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors bg-slate-50/50 relative">
               <FileSpreadsheet className="w-10 h-10 text-indigo-500 mx-auto mb-3" />
               <p className="text-xs font-bold text-slate-800 mb-1">
-                Arraste seu arquivo CSV ou clique para procurar
+                Arraste seu arquivo ou clique para procurar
               </p>
-              <p className="text-[11px] text-slate-400 mb-4">
-                Suporta arquivos .csv delimitados por vírgula ou ponto-e-vírgula
-              </p>
+              <p className="text-[11px] text-slate-400 mb-4">Suporta arquivos .csv e .xlsx</p>
               <input
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx"
                 onChange={handleFileUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
@@ -295,7 +352,6 @@ export default function Import() {
         </Card>
       )}
 
-      {/* STEP 2: Mapping */}
       {step === 2 && (
         <div className="space-y-6">
           <Card className="border-slate-200 shadow-xs">
@@ -304,7 +360,7 @@ export default function Import() {
                 1. Associar ao Evento
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent>
               <div className="flex items-center gap-3">
                 <div className="flex-1">
                   <Select value={targetEventId} onValueChange={setTargetEventId}>
@@ -346,141 +402,17 @@ export default function Import() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Nome Completo *</Label>
-                  <Select
-                    value={mapping.name}
-                    onValueChange={(val) => setMapping({ ...mapping, name: val })}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione a coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvHeaders.map((h) => (
-                        <SelectItem key={h} value={h} className="text-xs">
-                          {h}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">E-mail *</Label>
-                  <Select
-                    value={mapping.email}
-                    onValueChange={(val) => setMapping({ ...mapping, email: val })}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione a coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvHeaders.map((h) => (
-                        <SelectItem key={h} value={h} className="text-xs">
-                          {h}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Telefone</Label>
-                  <Select
-                    value={mapping.phone}
-                    onValueChange={(val) => setMapping({ ...mapping, phone: val })}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione a coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvHeaders.map((h) => (
-                        <SelectItem key={h} value={h} className="text-xs">
-                          {h}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Empresa</Label>
-                  <Select
-                    value={mapping.company}
-                    onValueChange={(val) => setMapping({ ...mapping, company: val })}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione a coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvHeaders.map((h) => (
-                        <SelectItem key={h} value={h} className="text-xs">
-                          {h}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Cargo Original</Label>
-                  <Select
-                    value={mapping.raw_role}
-                    onValueChange={(val) => setMapping({ ...mapping, raw_role: val })}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione a coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvHeaders.map((h) => (
-                        <SelectItem key={h} value={h} className="text-xs">
-                          {h}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Status RSVP</Label>
-                  <Select
-                    value={mapping.rsvp}
-                    onValueChange={(val) => setMapping({ ...mapping, rsvp: val })}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione a coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvHeaders.map((h) => (
-                        <SelectItem key={h} value={h} className="text-xs">
-                          {h}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1 sm:col-span-2">
-                  <Label className="text-xs font-semibold">Possui Diploma de Graduação?</Label>
-                  <Select
-                    value={mapping.has_degree}
-                    onValueChange={(val) => setMapping({ ...mapping, has_degree: val })}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione a coluna" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvHeaders.map((h) => (
-                        <SelectItem key={h} value={h} className="text-xs">
-                          {h}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {renderColumnSelect('name', 'Nome Completo', true)}
+                {renderColumnSelect('email', 'E-mail', true)}
+                {renderColumnSelect('phone', 'Telefone')}
+                {renderColumnSelect('company', 'Empresa')}
+                {renderColumnSelect('raw_role', 'Cargo Original')}
+                {renderColumnSelect('rsvp', 'Status RSVP')}
+                <div className="sm:col-span-2">
+                  {renderColumnSelect('has_degree', 'Possui Diploma de Graduação?')}
                 </div>
               </div>
 
-              {/* Duplicates Options */}
               <div className="pt-4 border-t border-slate-100 space-y-2">
                 <Label className="text-xs font-semibold text-slate-800">
                   Tratamento de Duplicados
@@ -528,12 +460,15 @@ export default function Import() {
         </div>
       )}
 
-      {/* STEP 3: Progress & Report */}
       {step === 3 && (
         <Card className="border-slate-200 shadow-xs">
           <CardHeader>
             <CardTitle className="text-base font-bold text-slate-900">
-              {importing ? 'Processando Importação...' : 'Relatório de Importação'}
+              {importing
+                ? 'Processando Importação...'
+                : classifying
+                  ? 'Classificando com IA...'
+                  : 'Relatório de Importação'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -600,33 +535,61 @@ export default function Import() {
                   </div>
                 )}
 
-                <div className="flex justify-between pt-4 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setStep(1)}
-                    className="text-xs"
-                  >
-                    Importar outro arquivo
-                  </Button>
-                  <Button
-                    asChild
-                    size="sm"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
-                  >
-                    <Link to="/contatos">
-                      <span>Ver contatos do evento</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </Button>
-                </div>
+                {classifying && (
+                  <div className="space-y-3 border-t border-slate-100 pt-4">
+                    <div className="flex items-center gap-2 text-indigo-700">
+                      <Sparkles className="w-4 h-4 animate-pulse" />
+                      <span className="text-xs font-bold">Classificação IA em andamento...</span>
+                    </div>
+                    <Progress value={classifyProgress} className="h-3" />
+                    <p className="text-xs text-center text-slate-500">
+                      {classifiedCount} de {totalToClassify} contatos classificados
+                    </p>
+                  </div>
+                )}
+
+                {!classifying && classifiedCount > 0 && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-indigo-50 border border-indigo-100">
+                    <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                    <span className="text-xs text-indigo-800 font-medium">
+                      {classifiedCount} contatos classificados com IA! Perfis, interesses e
+                      mensagens personalizadas foram gerados.
+                    </span>
+                  </div>
+                )}
+
+                {!classifying && (
+                  <div className="flex justify-between pt-4 border-t border-slate-100">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setStep(1)
+                        setImportReport(null)
+                        setClassifiedCount(0)
+                      }}
+                      className="text-xs"
+                    >
+                      Importar outro arquivo
+                    </Button>
+                    <Button
+                      asChild
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+                    >
+                      <Link to="/contatos">
+                        <span>Ver contatos do evento</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Dialog Inline New Event */}
       <Dialog open={newEventOpen} onOpenChange={setNewEventOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

@@ -16,6 +16,7 @@ routerAdd(
     let imported = 0
     let skipped = 0
     const errors = []
+    const importedIds = []
     const seenEmails = new Set()
 
     for (let i = 0; i < contacts.length; i++) {
@@ -80,13 +81,19 @@ routerAdd(
         rec.set('priority', 'Média')
 
         $app.save(rec)
+        importedIds.push(rec.id)
         imported++
       } catch (err) {
         errors.push({ row: rowNum, reason: err.message || 'Erro ao salvar contato no banco' })
       }
     }
 
-    return e.json(200, { imported: imported, skipped: skipped, errors: errors })
+    return e.json(200, {
+      imported: imported,
+      skipped: skipped,
+      errors: errors,
+      imported_ids: importedIds,
+    })
   },
   $apis.requireAuth(),
 )
