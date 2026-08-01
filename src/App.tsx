@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard'
 import Contacts from './pages/Contacts'
 import ContactDetail from './pages/ContactDetail'
 import Import from './pages/Import'
+import Campaigns from './pages/Campaigns'
+import CampaignDetail from './pages/CampaignDetail'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/contatos" element={<Contacts />} />
             <Route path="/contatos/:id" element={<ContactDetail />} />
             <Route path="/importar" element={<Import />} />
+            <Route path="/campanhas" element={<Campaigns />} />
+            <Route path="/campanhas/:id" element={<CampaignDetail />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

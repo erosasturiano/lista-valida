@@ -1,0 +1,233 @@
+import { useState } from 'react'
+import { Mail } from 'lucide-react'
+import { createCampaign } from '@/services/campaigns'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useToast } from '@/hooks/use-toast'
+
+interface CampaignFormDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  eventId: string
+  onCreated: () => void
+}
+
+export function CampaignFormDialog({
+  open,
+  onOpenChange,
+  eventId,
+  onCreated,
+}: CampaignFormDialogProps) {
+  const { toast } = useToast()
+  const [saving, setSaving] = useState(false)
+  const [name, setName] = useState('')
+  const [subject, setSubject] = useState('Convite especial: {nome}, sua presença no nosso evento')
+  const [body, setBody] = useState(
+    'Olá {nome},\n\n{mensagem_ia}\n\nConfirme sua presença!\n\nAbraços',
+  )
+  const [senderName, setSenderName] = useState('')
+  const [senderEmail, setSenderEmail] = useState('')
+  const [filterRsvp, setFilterRsvp] = useState('todos')
+  const [filterPriority, setFilterPriority] = useState('todas')
+  const [filterCategory, setFilterCategory] = useState('todas')
+
+  const handleCreate = async () => {
+    if (!name.trim() || !subject.trim() || !body.trim()) {
+      toast({ title: 'Preencha nome, assunto e corpo do e-mail.' })
+      return
+    }
+    setSaving(true)
+    try {
+      await createCampaign({
+        name: name.trim(),
+        event: eventId,
+        subject: subject.trim(),
+        body_template: body.trim(),
+        sender_name: senderName.trim(),
+        sender_email: senderEmail.trim(),
+        status: 'rascunho',
+        filter_rsvp: filterRsvp,
+        filter_priority: filterPriority,
+        filter_category: filterCategory,
+        total_sent: 0,
+        total_failed: 0,
+      })
+      toast({ title: 'Campanha criada com sucesso!' })
+      setName('')
+      setSenderName('')
+      setSenderEmail('')
+      onOpenChange(false)
+      onCreated()
+    } catch {
+      toast({ title: 'Erro ao criar campanha.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold flex items-center gap-2">
+            <Mail className="w-4 h-4 text-indigo-600" />
+            Nova Campanha de E-mail
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold">Nome da Campanha *</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Convite Lote 1"
+              className="text-xs h-9"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold">Assunto *</Label>
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="text-xs h-9"
+            />
+            <p className="text-[10px] text-slate-400">
+              Variáveis: {'{nome}'}, {'{empresa}'}, {'{cargo}'}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold">Corpo do E-mail *</Label>
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              className="text-xs h-32"
+            />
+            <p className="text-[10px] text-slate-400">
+              Variáveis: {'{nome}'}, {'{empresa}'}, {'{cargo}'}, {'{mensagem_ia}'}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Remetente (Nome)</Label>
+              <Input
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                placeholder="Equipe Evento"
+                className="text-xs h-9"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Remetente (E-mail)</Label>
+              <Input
+                value={senderEmail}
+                onChange={(e) => setSenderEmail(e.target.value)}
+                placeholder="contato@evento.com"
+                className="text-xs h-9"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Filtro RSVP</Label>
+              <Select value={filterRsvp} onValueChange={setFilterRsvp}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos" className="text-xs">
+                    Todos
+                  </SelectItem>
+                  <SelectItem value="Confirmou" className="text-xs">
+                    Confirmou
+                  </SelectItem>
+                  <SelectItem value="Aguardando" className="text-xs">
+                    Aguardando
+                  </SelectItem>
+                  <SelectItem value="Recusou" className="text-xs">
+                    Recusou
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Prioridade</Label>
+              <Select value={filterPriority} onValueChange={setFilterPriority}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas" className="text-xs">
+                    Todas
+                  </SelectItem>
+                  <SelectItem value="Alta" className="text-xs">
+                    Alta
+                  </SelectItem>
+                  <SelectItem value="Média" className="text-xs">
+                    Média
+                  </SelectItem>
+                  <SelectItem value="Baixa" className="text-xs">
+                    Baixa
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Categoria</Label>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas" className="text-xs">
+                    Todas
+                  </SelectItem>
+                  <SelectItem value="C-Level" className="text-xs">
+                    C-Level
+                  </SelectItem>
+                  <SelectItem value="Diretoria" className="text-xs">
+                    Diretoria
+                  </SelectItem>
+                  <SelectItem value="Gerência" className="text-xs">
+                    Gerência
+                  </SelectItem>
+                  <SelectItem value="Coordenação" className="text-xs">
+                    Coordenação
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="text-xs">
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleCreate}
+            disabled={saving}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+          >
+            {saving ? 'Criando...' : 'Criar Campanha'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

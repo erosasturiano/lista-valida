@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T20:13:45.988Z",
+  "generatedAt": "2026-08-01T20:31:27.042Z",
   "collections": [
     {
       "name": "users",
@@ -248,6 +248,213 @@
         "CREATE INDEX idx_mailing_contacts_status ON mailing_contacts (classification_status)",
         "CREATE INDEX idx_mailing_contacts_category ON mailing_contacts (role_category)",
         "CREATE INDEX idx_mailing_contacts_created ON mailing_contacts (created DESC)"
+      ]
+    },
+    {
+      "name": "email_campaigns",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "event",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "events"
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "body_template",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "sender_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sender_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["rascunho", "enviando", "enviado", "parcialmente_falhou"]
+        },
+        {
+          "name": "filter_rsvp",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["todos", "Confirmou", "Aguardando", "Recusou"]
+        },
+        {
+          "name": "filter_priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["todas", "Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "filter_category",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "todas",
+            "C-Level",
+            "Diretoria",
+            "Gerência",
+            "Coordenação",
+            "Analista",
+            "Assistente/Auxiliar",
+            "Estagiário",
+            "Consultor/Autônomo",
+            "Outro"
+          ]
+        },
+        {
+          "name": "total_sent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_failed",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_email_campaigns_event ON email_campaigns (event)",
+        "CREATE INDEX idx_email_campaigns_status ON email_campaigns (status)"
+      ]
+    },
+    {
+      "name": "email_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "campaign",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "email_campaigns"
+        },
+        {
+          "name": "contact",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "mailing_contacts"
+        },
+        {
+          "name": "recipient_email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "recipient_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["enviado", "falhou"]
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sent_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_email_logs_campaign ON email_logs (campaign)",
+        "CREATE INDEX idx_email_logs_status ON email_logs (status)"
       ]
     }
   ]
