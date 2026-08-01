@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T21:51:24.078Z",
+  "generatedAt": "2026-08-01T22:19:21.556Z",
   "collections": [
     {
       "name": "users",
@@ -29,19 +29,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": [
@@ -83,24 +78,17 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": [
-        "CREATE INDEX idx_events_created ON events (created DESC)"
-      ]
+      "indexes": ["CREATE INDEX idx_events_created ON events (created DESC)"]
     },
     {
       "name": "mailing_contacts",
@@ -155,32 +143,21 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "Aguardando",
-            "Confirmou",
-            "Recusou"
-          ]
+          "selectValues": ["Aguardando", "Confirmou", "Recusou"]
         },
         {
           "name": "has_degree",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "Sim",
-            "Não"
-          ]
+          "selectValues": ["Sim", "Não"]
         },
         {
           "name": "classification_status",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "Pendente",
-            "Classificado",
-            "Revisado"
-          ]
+          "selectValues": ["Pendente", "Classificado", "Revisado"]
         },
         {
           "name": "role_category",
@@ -204,11 +181,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "Alta",
-            "Média",
-            "Baixa"
-          ]
+          "selectValues": ["Alta", "Média", "Baixa"]
         },
         {
           "name": "interests",
@@ -259,19 +232,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": [
@@ -335,36 +303,21 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "rascunho",
-            "enviando",
-            "enviado",
-            "parcialmente_falhou"
-          ]
+          "selectValues": ["rascunho", "enviando", "enviado", "parcialmente_falhou"]
         },
         {
           "name": "filter_rsvp",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "todos",
-            "Confirmou",
-            "Aguardando",
-            "Recusou"
-          ]
+          "selectValues": ["todos", "Confirmou", "Aguardando", "Recusou"]
         },
         {
           "name": "filter_priority",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "todas",
-            "Alta",
-            "Média",
-            "Baixa"
-          ]
+          "selectValues": ["todas", "Alta", "Média", "Baixa"]
         },
         {
           "name": "filter_category",
@@ -401,19 +354,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": [
@@ -475,10 +423,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": [
-            "enviado",
-            "falhou"
-          ]
+          "selectValues": ["enviado", "falhou"]
         },
         {
           "name": "error_message",
@@ -497,19 +442,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "opened_at",
@@ -596,19 +536,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": [

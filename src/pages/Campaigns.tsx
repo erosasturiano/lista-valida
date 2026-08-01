@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, Plus, ChevronRight, CheckCircle2, AlertCircle, FileText } from 'lucide-react'
+import { Mail, Plus, ChevronRight, CheckCircle2, AlertCircle, FileText, Globe } from 'lucide-react'
 import { useEventContext } from '@/contexts/event-context'
 import { getCampaigns, CampaignRecord } from '@/services/campaigns'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -66,6 +66,12 @@ export default function Campaigns() {
             <Link to="/modelos">
               <FileText className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Modelos de E-mail</span>
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-9">
+            <Link to="/configuracoes">
+              <Globe className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Domínio & E-mail</span>
             </Link>
           </Button>
           <Button

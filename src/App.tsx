@@ -13,6 +13,7 @@ import Campaigns from './pages/Campaigns'
 import CampaignDetail from './pages/CampaignDetail'
 import Templates from './pages/Templates'
 import ReportDeliveries from './pages/ReportDeliveries'
+import DomainSettings from './pages/DomainSettings'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/campanhas" element={<Campaigns />} />
             <Route path="/campanhas/:id" element={<CampaignDetail />} />
             <Route path="/relatorio-entregas" element={<ReportDeliveries />} />
+            <Route path="/configuracoes" element={<DomainSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

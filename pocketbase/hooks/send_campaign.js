@@ -16,6 +16,23 @@ routerAdd(
       return e.badRequestError('Campanha já está em processo de envio')
     }
 
+    var apiKey = $secrets.get('RESEND_API_KEY') || ''
+    if (!apiKey) {
+      return e.badRequestError(
+        'RESEND_API_KEY não configurada. Acesse Configurações de Domínio para instruções.',
+      )
+    }
+
+    var senderName = campaign.getString('sender_name') || ''
+    var senderEmail = campaign.getString('sender_email') || ''
+    if (!senderEmail) {
+      return e.badRequestError(
+        'Remetente (sender_email) não configurado na campanha. Configure antes de enviar.',
+      )
+    }
+
+    var fromField = senderName ? senderName + ' <' + senderEmail + '>' : senderEmail
+
     const eventId = campaign.getString('event')
     const subjectTemplate = campaign.getString('subject')
     const bodyTemplate = campaign.getString('body_template')
@@ -69,6 +86,11 @@ routerAdd(
       const role = contact.getString('raw_role') || ''
       const suggestedMsg = contact.getString('suggested_message') || ''
 
+      if (!email) {
+        failed++
+        continue
+      }
+
       const subject = subjectTemplate
         .replace(/\{nome\}/g, name)
         .replace(/\{empresa\}/g, company)
@@ -80,40 +102,69 @@ routerAdd(
         .replace(/\{cargo\}/g, role)
         .replace(/\{mensagem_ia\}/g, suggestedMsg)
 
-      try {
-        var log = new Record(logsCol)
-        log.set('campaign', campaignId)
-        log.set('contact', contact.id)
-        log.set('recipient_email', email)
-        log.set('recipient_name', name)
-        log.set('subject', subject)
-        log.set('body', body)
-        log.set('status', 'enviado')
-        log.set('sent_at', new Date().toISOString())
-        log.set('click_count', 0)
-        $app.save(log)
+      var htmlBody = body.replace(/\n/g, '<br>\n')
 
-        var trackClickBase = baseUrl + '/backend/v1/track-click/' + log.id + '?url='
-        var trackedBody = body.replace(/href=["'](https?:\/\/[^"']+)["']/gi, function (match, url) {
+      var log = new Record(logsCol)
+      log.set('campaign', campaignId)
+      log.set('contact', contact.id)
+      log.set('recipient_email', email)
+      log.set('recipient_name', name)
+      log.set('subject', subject)
+      log.set('click_count', 0)
+      $app.save(log)
+
+      var trackClickBase = baseUrl + '/backend/v1/track-click/' + log.id + '?url='
+      var trackedBody = htmlBody.replace(
+        /href=["'](https?:\/\/[^"']+)["']/gi,
+        function (match, url) {
           return 'href="' + trackClickBase + encodeURIComponent(url) + '"'
-        })
-        var pixelUrl = baseUrl + '/backend/v1/track-open/' + log.id
-        trackedBody +=
-          '<img src="' + pixelUrl + '" width="1" height="1" alt="" style="display:none;" />'
-        log.set('body', trackedBody)
-        $app.save(log)
+        },
+      )
+      var pixelUrl = baseUrl + '/backend/v1/track-open/' + log.id
+      trackedBody +=
+        '<img src="' + pixelUrl + '" width="1" height="1" alt="" style="display:none;" />'
 
-        sent++
-      } catch (err) {
-        var log = new Record(logsCol)
-        log.set('campaign', campaignId)
-        log.set('contact', contact.id)
-        log.set('recipient_email', email)
-        log.set('recipient_name', name)
-        log.set('subject', subject)
-        log.set('body', body)
+      try {
+        var res = $http.send({
+          url: 'https://api.resend.com/emails',
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromField,
+            to: [email],
+            subject: subject,
+            html: trackedBody,
+          }),
+          timeout: 30,
+        })
+
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          log.set('body', trackedBody)
+          log.set('status', 'enviado')
+          log.set('sent_at', new Date().toISOString())
+          $app.save(log)
+          sent++
+        } else {
+          var errMsg = 'Resend API error (HTTP ' + res.statusCode + ')'
+          try {
+            if (res.json && res.json.message) {
+              errMsg = String(res.json.message)
+            }
+          } catch (_) {}
+          log.set('body', trackedBody)
+          log.set('status', 'falhou')
+          log.set('error_message', errMsg)
+          $app.save(log)
+          failed++
+        }
+      } catch (sendErr) {
+        var transportErr = 'Erro de conexão com Resend: ' + String(sendErr.message || sendErr)
+        log.set('body', trackedBody)
         log.set('status', 'falhou')
-        log.set('error_message', String(err.message || err))
+        log.set('error_message', transportErr)
         $app.save(log)
         failed++
       }
