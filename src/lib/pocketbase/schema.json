@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T20:03:32.960Z",
+  "generatedAt": "2026-08-01T20:10:26.750Z",
   "collections": [
     {
       "name": "users",
@@ -29,24 +29,225 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
         "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "events",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "event_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_events_created ON events (created DESC)"]
+    },
+    {
+      "name": "mailing_contacts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "event",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "events"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "company",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "raw_role",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rsvp",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Aguardando", "Confirmou", "Recusou"]
+        },
+        {
+          "name": "has_degree",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Sim", "Não"]
+        },
+        {
+          "name": "classification_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Pendente", "Classificado", "Revisado"]
+        },
+        {
+          "name": "role_category",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "C-Level",
+            "Diretoria",
+            "Gerência",
+            "Coordenação",
+            "Analista",
+            "Assistente/Auxiliar",
+            "Estagiário",
+            "Consultor/Autônomo",
+            "Outro"
+          ]
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Alta", "Média", "Baixa"]
+        },
+        {
+          "name": "interests",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "demands",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "profile_summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "suggested_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_classified_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "search_embedding",
+          "type": "vector",
+          "required": false,
+          "system": false,
+          "vectorDimensions": 1536,
+          "vectorDistance": "cosine"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_mailing_contacts_event ON mailing_contacts (event)",
+        "CREATE INDEX idx_mailing_contacts_rsvp ON mailing_contacts (rsvp)",
+        "CREATE INDEX idx_mailing_contacts_status ON mailing_contacts (classification_status)",
+        "CREATE INDEX idx_mailing_contacts_category ON mailing_contacts (role_category)",
+        "CREATE INDEX idx_mailing_contacts_created ON mailing_contacts (created DESC)"
       ]
     }
   ]
