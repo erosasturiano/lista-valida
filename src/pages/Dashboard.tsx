@@ -161,7 +161,8 @@ export default function Dashboard() {
             Olá, seja bem-vindo!
           </h1>
           <p className="text-xs text-slate-500 capitalize">
-            {formattedDate} • {selectedEvent ? selectedEvent.name : 'Nenhum evento selecionado'}
+            {formattedDate} •{' '}
+            {selectedEvent ? selectedEvent.name : 'Nenhum mailing (lista) selecionado'}
           </p>
         </div>
       </div>
@@ -285,7 +286,7 @@ export default function Dashboard() {
             <Users className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-slate-800">
-            Nenhum contato cadastrado no evento
+            Nenhum contato cadastrado no mailing (lista)
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">
             Importe uma planilha em formato CSV para iniciar a qualificação dos dados com
@@ -307,7 +308,9 @@ export default function Dashboard() {
           <Card className="border-slate-200 shadow-xs">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-slate-900">Distribuição RSVP</CardTitle>
-              <CardDescription className="text-xs">Confirmações no evento atual</CardDescription>
+              <CardDescription className="text-xs">
+                Confirmações no mailing (lista) atual
+              </CardDescription>
             </CardHeader>
             <CardContent className="h-64 pt-0">
               <ChartContainer config={{}} className="h-full w-full">
@@ -424,8 +427,8 @@ export default function Dashboard() {
                   Últimos Contatos Adicionados
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Visualização rápida da base do evento
-                </CardDescription>
+                  Visualização rápida da base do mailing (lista)
+                </CardDescription>{' '}
               </div>
               <Button asChild variant="ghost" size="sm" className="text-xs text-indigo-600 gap-1">
                 <Link to="/contatos">

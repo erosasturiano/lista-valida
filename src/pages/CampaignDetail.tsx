@@ -104,7 +104,9 @@ export default function CampaignDetail() {
             <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
               {campaign.name}
             </h1>
-            <p className="text-xs text-slate-500">{campaign.expand?.event?.name || 'Evento'}</p>
+            <p className="text-xs text-slate-500">
+              {campaign.expand?.event?.name || 'Mailing (lista)'}
+            </p>
           </div>
         </div>
         <Button

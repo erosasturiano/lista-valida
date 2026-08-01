@@ -54,11 +54,11 @@ export function Topbar({ onOpenMobileSidebar }: TopbarProps) {
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-indigo-600 hidden sm:inline-block" />
           <span className="text-xs font-semibold text-slate-500 hidden md:inline-block">
-            Evento:
+            Mailing (lista):
           </span>
           <Select value={selectedEventId || ''} onValueChange={(val) => setSelectedEventId(val)}>
             <SelectTrigger className="w-[180px] sm:w-[220px] h-9 text-xs font-medium bg-slate-50 border-slate-200 focus:ring-indigo-500">
-              <SelectValue placeholder="Selecione um evento" />
+              <SelectValue placeholder="Selecione um mailing (lista)" />
             </SelectTrigger>
             <SelectContent>
               {events.map((evt) => (
@@ -68,7 +68,7 @@ export function Topbar({ onOpenMobileSidebar }: TopbarProps) {
               ))}
               {events.length === 0 && (
                 <SelectItem value="empty" disabled className="text-xs">
-                  Nenhum evento encontrado
+                  Nenhum mailing (lista) encontrado
                 </SelectItem>
               )}
             </SelectContent>

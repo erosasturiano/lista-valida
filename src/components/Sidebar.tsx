@@ -29,7 +29,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     { label: 'Importar', path: '/importar', icon: Upload },
     { label: 'Modelos de E-mail', path: '/modelos', icon: FileText },
     { label: 'Campanhas', path: '/campanhas', icon: Mail },
-    { label: 'Eventos', path: '/eventos', icon: Calendar },
+    { label: 'Mailing (listas)', path: '/eventos', icon: Calendar },
   ]
 
   const getInitials = (name?: string) => {
@@ -51,7 +51,9 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <span className="font-bold text-base tracking-tight block text-white">MailFlow</span>
+            <span className="font-bold text-base tracking-tight block text-white">
+              Lista Válida
+            </span>
             <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider block">
               Higienização AI
             </span>

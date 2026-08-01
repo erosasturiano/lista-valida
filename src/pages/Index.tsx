@@ -66,19 +66,18 @@ export default function Index() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <span className="font-bold text-xl tracking-tight">MailFlow</span>
+            <span className="font-bold text-xl tracking-tight">Lista Válida</span>
           </div>
         </div>
 
         <div className="relative z-10 max-w-lg my-auto py-12">
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight text-white mb-4">
-            Automação de higienização de mailing para eventos
-          </h1>
+            Automação de higienização de mailing para mailings (listas)
+          </h1>{' '}
           <p className="text-slate-300 text-base leading-relaxed mb-8">
             Classifique cargos, identifique interesses reais e crie abordagens personalizadas com
             Inteligência Artificial para elevar a conversão dos seus eventos.
           </p>
-
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
@@ -111,7 +110,7 @@ export default function Index() {
         </div>
 
         <div className="relative z-10 text-xs text-slate-400 border-t border-slate-800 pt-6">
-          © {new Date().getFullYear()} MailFlow – Gestão Inteligente de Eventos.
+          © {new Date().getFullYear()} Lista Válida – Gestão Inteligente de Mailings (listas).
         </div>
       </div>
 
@@ -122,7 +121,7 @@ export default function Index() {
             <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg mx-auto mb-3">
               <Sparkles className="w-7 h-7 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">MailFlow</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Lista Válida</h2>
             <p className="text-xs text-slate-500 mt-1">Higienização e Qualificação de Mailings</p>
           </div>
 

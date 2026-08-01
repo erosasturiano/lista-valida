@@ -57,7 +57,9 @@ export default function Campaigns() {
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             Campanhas de E-mail
           </h1>
-          <p className="text-xs text-slate-500">{campaigns.length} campanhas no evento atual</p>
+          <p className="text-xs text-slate-500">
+            {campaigns.length} campanhas no mailing (lista) atual
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-9">

@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 
-const TARGET_EVENT_NAME = 'Evento DHO-7235a'
+const TARGET_EVENT_NAME = 'Mailing DHO-7235a'
 
 export default function Import() {
   const { events, selectedEventId, refreshEvents, setSelectedEventId } = useEventContext()
@@ -185,7 +185,7 @@ export default function Import() {
       setSelectedEventId(created.id)
       setNewEventOpen(false)
       setNewEventName('')
-      toast({ title: 'Evento criado com sucesso!' })
+      toast({ title: 'Mailing (lista) criado com sucesso!' })
     } catch {
       toast({ title: 'Erro ao criar evento.' })
     }
@@ -297,7 +297,7 @@ export default function Import() {
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto pb-12">
       <div className="border-b border-slate-200 pb-4">
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Importar Mailing de Evento
+          Importar Mailing (lista)
         </h1>
         <p className="text-xs text-slate-500">
           Envie planilhas CSV ou XLSX para higienização e classificação automática com IA
@@ -357,7 +357,7 @@ export default function Import() {
           <Card className="border-slate-200 shadow-xs">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold text-slate-900">
-                1. Associar ao Evento
+                1. Associar ao Mailing (lista)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -365,7 +365,7 @@ export default function Import() {
                 <div className="flex-1">
                   <Select value={targetEventId} onValueChange={setTargetEventId}>
                     <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Selecione o evento destino" />
+                      <SelectValue placeholder="Selecione o mailing (lista) destino" />
                     </SelectTrigger>
                     <SelectContent>
                       {events.map((evt) => (
@@ -384,7 +384,7 @@ export default function Import() {
                   className="h-9 text-xs gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Novo evento</span>
+                  <span>Novo mailing (lista)</span>
                 </Button>
               </div>
             </CardContent>
@@ -476,7 +476,7 @@ export default function Import() {
               <div className="space-y-3 py-6">
                 <Progress value={importProgress} className="h-3" />
                 <p className="text-xs text-center text-slate-500">
-                  Gravando participantes na base do evento...
+                  Gravando participantes na base do mailing (lista)...
                 </p>
               </div>
             )}
@@ -593,10 +593,10 @@ export default function Import() {
       <Dialog open={newEventOpen} onOpenChange={setNewEventOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Criar Novo Evento</DialogTitle>
+            <DialogTitle className="text-base font-bold">Criar Novo Mailing (lista)</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <Label className="text-xs font-semibold">Nome do Evento</Label>
+            <Label className="text-xs font-semibold">Nome do Mailing (lista)</Label>
             <Input
               placeholder="Ex: Convenção Anual de RH 2026"
               value={newEventName}
