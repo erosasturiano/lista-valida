@@ -1,6 +1,8 @@
-import { useState } from 'react'
-import { Mail } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Mail, FileText } from 'lucide-react'
 import { createCampaign } from '@/services/campaigns'
+import { getTemplates, TEMPLATE_CATEGORIES, type TemplateRecord } from '@/services/templates'
+import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +17,9 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -28,6 +32,11 @@ interface CampaignFormDialogProps {
   onCreated: () => void
 }
 
+function isValidEmail(email: string): boolean {
+  if (!email) return true
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
 export function CampaignFormDialog({
   open,
   onOpenChange,
@@ -37,21 +46,50 @@ export function CampaignFormDialog({
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
-  const [subject, setSubject] = useState('Convite especial: {nome}, sua presença no nosso evento')
-  const [body, setBody] = useState(
-    'Olá {nome},\n\n{mensagem_ia}\n\nConfirme sua presença!\n\nAbraços',
-  )
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
   const [senderName, setSenderName] = useState('')
   const [senderEmail, setSenderEmail] = useState('')
   const [filterRsvp, setFilterRsvp] = useState('todos')
   const [filterPriority, setFilterPriority] = useState('todas')
   const [filterCategory, setFilterCategory] = useState('todas')
+  const [templates, setTemplates] = useState<TemplateRecord[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('none')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      const data = await getTemplates()
+      setTemplates(data)
+    } catch {
+      /* noop */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open) loadTemplates()
+  }, [open, loadTemplates])
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplate(templateId)
+    if (templateId === 'none') return
+    const tmpl = templates.find((t) => t.id === templateId)
+    if (!tmpl) return
+    if (tmpl.sender_name) setSenderName(tmpl.sender_name)
+    if (tmpl.sender_email) setSenderEmail(tmpl.sender_email)
+    if (tmpl.subject) setSubject(tmpl.subject)
+    if (tmpl.body_template) setBody(tmpl.body_template)
+  }
 
   const handleCreate = async () => {
-    if (!name.trim() || !subject.trim() || !body.trim()) {
-      toast({ title: 'Preencha nome, assunto e corpo do e-mail.' })
-      return
-    }
+    const errors: FieldErrors = {}
+    if (!name.trim()) errors.name = 'Campo obrigatório'
+    if (!subject.trim()) errors.subject = 'Campo obrigatório'
+    if (!body.trim()) errors.body_template = 'Campo obrigatório'
+    if (senderEmail && !isValidEmail(senderEmail)) errors.sender_email = 'E-mail inválido'
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
     setSaving(true)
     try {
       await createCampaign({
@@ -70,11 +108,16 @@ export function CampaignFormDialog({
       })
       toast({ title: 'Campanha criada com sucesso!' })
       setName('')
+      setSubject('Convite especial: {nome}, sua presença no nosso evento')
+      setBody('Olá {nome},\n\n{mensagem_ia}\n\nConfirme sua presença!\n\nAbraços')
       setSenderName('')
       setSenderEmail('')
+      setSelectedTemplate('none')
+      setFieldErrors({})
       onOpenChange(false)
       onCreated()
-    } catch {
+    } catch (err) {
+      setFieldErrors(extractFieldErrors(err))
       toast({ title: 'Erro ao criar campanha.' })
     } finally {
       setSaving(false)
@@ -91,6 +134,41 @@ export function CampaignFormDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
+          {/* Template Selector */}
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold flex items-center gap-1.5">
+              <FileText className="w-3 h-3 text-indigo-500" />
+              Modelo de E-mail
+            </Label>
+            <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="Selecione um modelo (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none" className="text-xs">
+                  — Sem modelo —
+                </SelectItem>
+                {TEMPLATE_CATEGORIES.map((cat) => {
+                  const catTemplates = templates.filter((t) => t.category === cat)
+                  if (catTemplates.length === 0) return null
+                  return (
+                    <SelectGroup key={cat}>
+                      <SelectLabel className="text-[10px] font-bold uppercase">{cat}</SelectLabel>
+                      {catTemplates.map((t) => (
+                        <SelectItem key={t.id} value={t.id} className="text-xs">
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-slate-400">
+              Selecione um modelo para preencher automaticamente os campos abaixo.
+            </p>
+          </div>
+
           <div className="space-y-1">
             <Label className="text-xs font-semibold">Nome da Campanha *</Label>
             <Input
@@ -99,6 +177,7 @@ export function CampaignFormDialog({
               placeholder="Ex: Convite Lote 1"
               className="text-xs h-9"
             />
+            {fieldErrors.name && <p className="text-[10px] text-red-500">{fieldErrors.name}</p>}
           </div>
           <div className="space-y-1">
             <Label className="text-xs font-semibold">Assunto *</Label>
@@ -107,6 +186,9 @@ export function CampaignFormDialog({
               onChange={(e) => setSubject(e.target.value)}
               className="text-xs h-9"
             />
+            {fieldErrors.subject && (
+              <p className="text-[10px] text-red-500">{fieldErrors.subject}</p>
+            )}
             <p className="text-[10px] text-slate-400">
               Variáveis: {'{nome}'}, {'{empresa}'}, {'{cargo}'}
             </p>
@@ -118,6 +200,9 @@ export function CampaignFormDialog({
               onChange={(e) => setBody(e.target.value)}
               className="text-xs h-32"
             />
+            {fieldErrors.body_template && (
+              <p className="text-[10px] text-red-500">{fieldErrors.body_template}</p>
+            )}
             <p className="text-[10px] text-slate-400">
               Variáveis: {'{nome}'}, {'{empresa}'}, {'{cargo}'}, {'{mensagem_ia}'}
             </p>
@@ -140,6 +225,9 @@ export function CampaignFormDialog({
                 placeholder="contato@evento.com"
                 className="text-xs h-9"
               />
+              {fieldErrors.sender_email && (
+                <p className="text-[10px] text-red-500">{fieldErrors.sender_email}</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -208,6 +296,21 @@ export function CampaignFormDialog({
                   </SelectItem>
                   <SelectItem value="Coordenação" className="text-xs">
                     Coordenação
+                  </SelectItem>
+                  <SelectItem value="Analista" className="text-xs">
+                    Analista
+                  </SelectItem>
+                  <SelectItem value="Assistente/Auxiliar" className="text-xs">
+                    Assistente/Auxiliar
+                  </SelectItem>
+                  <SelectItem value="Estagiário" className="text-xs">
+                    Estagiário
+                  </SelectItem>
+                  <SelectItem value="Consultor/Autônomo" className="text-xs">
+                    Consultor/Autônomo
+                  </SelectItem>
+                  <SelectItem value="Outro" className="text-xs">
+                    Outro
                   </SelectItem>
                 </SelectContent>
               </Select>

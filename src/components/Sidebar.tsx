@@ -1,5 +1,15 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, Upload, Calendar, LogOut, Sparkles, X, Mail } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Users,
+  Upload,
+  Calendar,
+  LogOut,
+  Sparkles,
+  X,
+  Mail,
+  FileText,
+} from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -17,6 +27,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Contatos', path: '/contatos', icon: Users },
     { label: 'Importar', path: '/importar', icon: Upload },
+    { label: 'Modelos de E-mail', path: '/modelos', icon: FileText },
     { label: 'Campanhas', path: '/campanhas', icon: Mail },
     { label: 'Eventos', path: '/eventos', icon: Calendar },
   ]

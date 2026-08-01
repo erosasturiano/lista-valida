@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-01T20:31:27.042Z",
+  "generatedAt": "2026-08-01T20:59:15.745Z",
   "collections": [
     {
       "name": "users",
@@ -455,6 +455,80 @@
       "indexes": [
         "CREATE INDEX idx_email_logs_campaign ON email_logs (campaign)",
         "CREATE INDEX idx_email_logs_status ON email_logs (status)"
+      ]
+    },
+    {
+      "name": "email_templates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "category",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "RSVP",
+            "Envio de Certificado",
+            "Convite",
+            "Pitch",
+            "Convite para Comunidade Exclusiva"
+          ]
+        },
+        {
+          "name": "sender_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sender_email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "body_template",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_email_templates_category ON email_templates (category)",
+        "CREATE INDEX idx_email_templates_created ON email_templates (created DESC)"
       ]
     }
   ]

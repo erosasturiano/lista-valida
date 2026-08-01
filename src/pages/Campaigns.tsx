@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, Plus, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Mail, Plus, ChevronRight, CheckCircle2, AlertCircle, FileText } from 'lucide-react'
 import { useEventContext } from '@/contexts/event-context'
 import { getCampaigns, CampaignRecord } from '@/services/campaigns'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -59,15 +59,23 @@ export default function Campaigns() {
           </h1>
           <p className="text-xs text-slate-500">{campaigns.length} campanhas no evento atual</p>
         </div>
-        <Button
-          onClick={() => setDialogOpen(true)}
-          size="sm"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 self-start"
-          disabled={!selectedEvent?.id}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Nova Campanha</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-9">
+            <Link to="/modelos">
+              <FileText className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Modelos de E-mail</span>
+            </Link>
+          </Button>
+          <Button
+            onClick={() => setDialogOpen(true)}
+            size="sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 self-start"
+            disabled={!selectedEvent?.id}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nova Campanha</span>
+          </Button>
+        </div>
       </div>
 
       {loading ? (
