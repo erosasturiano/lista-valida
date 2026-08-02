@@ -14,6 +14,8 @@ import CampaignDetail from './pages/CampaignDetail'
 import Templates from './pages/Templates'
 import ReportDeliveries from './pages/ReportDeliveries'
 import DomainSettings from './pages/DomainSettings'
+import BlockedContacts from './pages/BlockedContacts'
+import Unsubscribe from './pages/Unsubscribe'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -27,6 +29,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+          <Route path="/descadastrar/:logId" element={<Unsubscribe />} />
           <Route path="/" element={<Index />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -38,6 +41,7 @@ const App = () => (
             <Route path="/campanhas/:id" element={<CampaignDetail />} />
             <Route path="/relatorio-entregas" element={<ReportDeliveries />} />
             <Route path="/configuracoes" element={<DomainSettings />} />
+            <Route path="/bloqueados" element={<BlockedContacts />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

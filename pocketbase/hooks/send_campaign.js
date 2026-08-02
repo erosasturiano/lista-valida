@@ -72,14 +72,36 @@ routerAdd(
     }
     if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
 
+    var blockedEmails = {}
+    try {
+      var blockedRecords = $app.findRecordsByFilter('blocked_contacts', '', '-created', 500, 0)
+      for (var b = 0; b < blockedRecords.length; b++) {
+        blockedEmails[blockedRecords[b].getString('email').toLowerCase()] = true
+      }
+    } catch (_) {}
+
+    var ignoredBlocked = 0
+    var sendableContacts = filteredContacts.filter(function (c) {
+      var email = c.getString('email').toLowerCase()
+      if (blockedEmails[email]) {
+        ignoredBlocked++
+        return false
+      }
+      return true
+    })
+
+    if (sendableContacts.length === 0) {
+      return e.json(200, { sent: 0, failed: 0, total: 0, ignored_blocked: ignoredBlocked })
+    }
+
     campaign.set('status', 'enviando')
     $app.save(campaign)
 
     let sent = 0
     let failed = 0
 
-    for (let i = 0; i < filteredContacts.length; i++) {
-      const contact = filteredContacts[i]
+    for (let i = 0; i < sendableContacts.length; i++) {
+      const contact = sendableContacts[i]
       const name = contact.getString('name')
       const email = contact.getString('email')
       const company = contact.getString('company') || ''
@@ -123,6 +145,27 @@ routerAdd(
       var pixelUrl = baseUrl + '/backend/v1/track-open/' + log.id
       trackedBody +=
         '<img src="' + pixelUrl + '" width="1" height="1" alt="" style="display:none;" />'
+
+      var siteUrl = $secrets.get('SITE_URL') || ''
+      if (!siteUrl) {
+        siteUrl = baseUrl
+      }
+      if (siteUrl.endsWith('/')) {
+        siteUrl = siteUrl.slice(0, -1)
+      }
+      var unsubUrl = siteUrl + '/descadastrar/' + log.id
+      trackedBody = trackedBody.replace(/\{link_descadastro\}/g, unsubUrl)
+      if (trackedBody.indexOf('Cancelamento de recebimento') === -1) {
+        trackedBody += '<hr><p style="font-size:12px;color:#666;margin-top:20px;padding-top:10px;">'
+        trackedBody += '<strong>Cancelamento de recebimento de e-mails</strong><br>'
+        trackedBody +=
+          'Você está recebendo este e-mail porque se cadastrou ou participou de um evento nosso. Caso não deseje mais receber nossas comunicações, você pode cancelar o recebimento a qualquer momento, de forma simples e gratuita.'
+        trackedBody += '</p>'
+        trackedBody +=
+          '<p style="margin-top:10px;"><a href="' +
+          unsubUrl +
+          '" style="color:#4f46e5;font-weight:bold;">Cancelar meu recebimento</a></p>'
+      }
 
       try {
         var res = $http.send({
@@ -202,7 +245,10 @@ routerAdd(
     campaign.set('total_failed', failed)
     $app.save(campaign)
 
-    var resultSummary = { sent: sent, failed: failed, total: filteredContacts.length }
+    var resultSummary = { sent: sent, failed: failed, total: sendableContacts.length }
+    if (ignoredBlocked > 0) {
+      resultSummary.ignored_blocked = ignoredBlocked
+    }
     if (failed > 0 && sent === 0) {
       var firstError = ''
       for (var j = 0; j < filteredContacts.length; j++) {

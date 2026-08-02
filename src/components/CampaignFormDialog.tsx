@@ -109,7 +109,9 @@ export function CampaignFormDialog({
       toast({ title: 'Campanha criada com sucesso!' })
       setName('')
       setSubject('Convite especial: {nome}, sua presença no nosso evento')
-      setBody('Olá {nome},\n\n{mensagem_ia}\n\nConfirme sua presença!\n\nAbraços')
+      setBody(
+        'Olá {nome},\n\n{mensagem_ia}\n\nConfirme sua presença!\n\nAbraços\n\n---\nCancelamento de recebimento de e-mails\n\nVocê está recebendo este e-mail porque se cadastrou ou participou de um evento nosso. Caso não deseje mais receber nossas comunicações, você pode cancelar o recebimento a qualquer momento, de forma simples e gratuita.\n\nCancelar meu recebimento: {link_descadastro}',
+      )
       setSenderName('')
       setSenderEmail('')
       setSelectedTemplate('none')

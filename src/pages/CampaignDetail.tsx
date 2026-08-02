@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Settings,
   RotateCcw,
+  Ban,
 } from 'lucide-react'
 import {
   getCampaign,
@@ -149,7 +150,12 @@ export default function CampaignDetail() {
     setSending(true)
     try {
       const result = await sendCampaign(id)
-      if (result.failed > 0 && result.sent === 0) {
+      if (result.total === 0 && result.ignored_blocked) {
+        toast({
+          title: 'Nenhum e-mail enviado',
+          description: `Todos os ${result.ignored_blocked} destinatários estão bloqueados.`,
+        })
+      } else if (result.failed > 0 && result.sent === 0) {
         toast({
           title: 'Disparo falhou',
           description: result.first_error
@@ -165,7 +171,7 @@ export default function CampaignDetail() {
       } else {
         toast({
           title: 'Disparo concluído!',
-          description: `${result.sent} e-mails enviados com sucesso.`,
+          description: `${result.sent} e-mails enviados com sucesso${result.ignored_blocked ? ` (${result.ignored_blocked} bloqueados)` : ''}.`,
         })
       }
       fetchData()
@@ -186,7 +192,12 @@ export default function CampaignDetail() {
     setRetrying(true)
     try {
       const result = await retryCampaignFailures(id)
-      if (result.failed > 0 && result.sent === 0) {
+      if (result.total === 0 && result.ignored_blocked) {
+        toast({
+          title: 'Nenhum reenvio necessário',
+          description: `Todos os ${result.ignored_blocked} destinatários estão bloqueados.`,
+        })
+      } else if (result.failed > 0 && result.sent === 0) {
         toast({
           title: 'Reenvio falhou',
           description: result.first_error
@@ -202,7 +213,7 @@ export default function CampaignDetail() {
       } else {
         toast({
           title: 'Reenvio concluído!',
-          description: `Reenvio concluído: ${result.sent} e-mails enviados com sucesso.`,
+          description: `Reenvio concluído: ${result.sent} e-mails enviados com sucesso${result.ignored_blocked ? ` (${result.ignored_blocked} bloqueados)` : ''}.`,
         })
       }
       fetchData()
@@ -258,6 +269,12 @@ export default function CampaignDetail() {
             <Link to="/relatorio-entregas">
               <BarChart3 className="w-3.5 h-3.5" />
               <span>Relatório</span>
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-8">
+            <Link to="/bloqueados">
+              <Ban className="w-3.5 h-3.5" />
+              <span>Bloqueados</span>
             </Link>
           </Button>
           <Button

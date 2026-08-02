@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-02T11:18:19.087Z",
+  "generatedAt": "2026-08-02T11:56:15.678Z",
   "collections": [
     {
       "name": "users",
@@ -549,6 +549,91 @@
       "indexes": [
         "CREATE INDEX idx_email_templates_category ON email_templates (category)",
         "CREATE INDEX idx_email_templates_created ON email_templates (created DESC)"
+      ]
+    },
+    {
+      "name": "blocked_contacts",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "contact",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "mailing_contacts"
+        },
+        {
+          "name": "event",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "events"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "reason",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Reclamação", "Descadastro", "Bounce", "Manual"]
+        },
+        {
+          "name": "source",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["link_descadastro", "formulario", "provedor", "manual"]
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "blocked_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_blocked_contacts_email ON blocked_contacts (email) WHERE email != \"\"",
+        "CREATE INDEX idx_blocked_contacts_reason ON blocked_contacts (reason)",
+        "CREATE INDEX idx_blocked_contacts_event ON blocked_contacts (event)",
+        "CREATE INDEX idx_blocked_contacts_blocked_at ON blocked_contacts (blocked_at)"
       ]
     }
   ]

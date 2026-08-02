@@ -33,6 +33,8 @@ import { useToast } from '@/hooks/use-toast'
 
 const VARIABLE_TOKENS = ['{nome}', '{empresa}', '{cargo}', '{link_evento}']
 
+const UNSUBSCRIBE_BLOCK = `\n\n---\nCancelamento de recebimento de e-mails\n\nVocê está recebendo este e-mail porque se cadastrou ou participou de um evento nosso. Caso não deseje mais receber nossas comunicações, você pode cancelar o recebimento a qualquer momento, de forma simples e gratuita.\n\nCancelar meu recebimento: {link_descadastro}`
+
 const SAMPLE_VALUES: Record<string, string> = {
   '{nome}': 'Maria Silva',
   '{empresa}': 'Exemplo Ltda',
@@ -255,6 +257,15 @@ export function TemplateFormDialog({
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setBody((prev) => prev + UNSUBSCRIBE_BLOCK)}
+                className="px-2 py-1 rounded bg-purple-50 text-purple-700 text-[10px] font-medium border border-purple-200 hover:bg-purple-100 transition-colors"
+              >
+                + Inserir bloco de descadastro (LGPD)
+              </button>
             </div>
           </div>
 
