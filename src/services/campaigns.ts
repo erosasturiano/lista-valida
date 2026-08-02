@@ -88,6 +88,12 @@ export const sendCampaign = async (
   return pb.send(`/backend/v1/campaigns/${id}/send`, { method: 'POST' })
 }
 
+export const retryCampaignFailures = async (
+  id: string,
+): Promise<{ sent: number; failed: number; total: number; first_error?: string }> => {
+  return pb.send(`/backend/v1/campaigns/${id}/retry-failures`, { method: 'POST' })
+}
+
 export const getCampaignLogs = async (campaignId: string): Promise<EmailLogRecord[]> => {
   return pb.collection('email_logs').getFullList<EmailLogRecord>({
     filter: `campaign = "${campaignId}"`,

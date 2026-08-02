@@ -10,11 +10,13 @@ import {
   BarChart3,
   AlertTriangle,
   Settings,
+  RotateCcw,
 } from 'lucide-react'
 import {
   getCampaign,
   getCampaignLogs,
   sendCampaign,
+  retryCampaignFailures,
   deleteCampaign,
   CampaignRecord,
   EmailLogRecord,
@@ -111,6 +113,8 @@ export default function CampaignDetail() {
   const [logs, setLogs] = useState<EmailLogRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [retrying, setRetrying] = useState(false)
+  const [retryTotal, setRetryTotal] = useState(0)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const fetchData = useCallback(async () => {
@@ -173,6 +177,43 @@ export default function CampaignDetail() {
       })
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleRetryFailures = async () => {
+    if (!id) return
+    setRetryTotal(failedCount)
+    setRetrying(true)
+    try {
+      const result = await retryCampaignFailures(id)
+      if (result.failed > 0 && result.sent === 0) {
+        toast({
+          title: 'Reenvio falhou',
+          description: result.first_error
+            ? `Todos os ${result.failed} reenvios falharam. Erro: ${result.first_error}`
+            : `Todos os ${result.failed} reenvios falharam. Verifique os detalhes abaixo.`,
+          variant: 'destructive',
+        })
+      } else if (result.failed > 0) {
+        toast({
+          title: 'Reenvio parcial',
+          description: `Reenvio concluído: ${result.sent} enviados, ${result.failed} falhas.`,
+        })
+      } else {
+        toast({
+          title: 'Reenvio concluído!',
+          description: `Reenvio concluído: ${result.sent} e-mails enviados com sucesso.`,
+        })
+      }
+      fetchData()
+    } catch (err) {
+      toast({
+        title: 'Erro ao reenviar falhas',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -432,7 +473,7 @@ export default function CampaignDetail() {
               )}
               <Button
                 onClick={handleSend}
-                disabled={sending || campaign.status === 'enviando'}
+                disabled={sending || retrying || campaign.status === 'enviando'}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-10 gap-2"
               >
                 {sending ? (
@@ -447,6 +488,26 @@ export default function CampaignDetail() {
                   </>
                 )}
               </Button>
+              {failedCount > 0 && (
+                <Button
+                  onClick={handleRetryFailures}
+                  disabled={retrying || sending || campaign.status === 'enviando'}
+                  variant="outline"
+                  className="w-full text-xs h-10 gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                >
+                  {retrying ? (
+                    <>
+                      <Clock className="w-4 h-4 animate-spin" />
+                      Reenviando... {Math.max(0, retryTotal - failedCount)} de {retryTotal}
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-4 h-4" />
+                      Reenviar falhas ({failedCount})
+                    </>
+                  )}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
