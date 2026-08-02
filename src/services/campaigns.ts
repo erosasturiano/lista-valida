@@ -84,7 +84,7 @@ export const deleteCampaign = async (id: string): Promise<boolean> => {
 
 export const sendCampaign = async (
   id: string,
-): Promise<{ sent: number; failed: number; total: number }> => {
+): Promise<{ sent: number; failed: number; total: number; first_error?: string }> => {
   return pb.send(`/backend/v1/campaigns/${id}/send`, { method: 'POST' })
 }
 

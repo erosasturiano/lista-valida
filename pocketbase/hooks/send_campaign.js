@@ -19,7 +19,7 @@ routerAdd(
     var apiKey = $secrets.get('RESEND_API_KEY') || ''
     if (!apiKey) {
       return e.badRequestError(
-        'RESEND_API_KEY não configurada. Acesse Configurações de Domínio para instruções.',
+        'RESEND_API_KEY não configurada. Acesse Configurações de Domínio para instruções de como obter e configurar a chave do Resend.',
       )
     }
 
@@ -27,7 +27,7 @@ routerAdd(
     var senderEmail = campaign.getString('sender_email') || ''
     if (!senderEmail) {
       return e.badRequestError(
-        'Remetente (sender_email) não configurado na campanha. Configure antes de enviar.',
+        'Remetente (sender_email) não configurado na campanha. Edite a campanha e defina um e-mail remetente com domínio verificado no Resend (ex: contato@seudominio.com.br). Acesse Configurações de Domínio para verificar o domínio.',
       )
     }
 
@@ -150,10 +150,37 @@ routerAdd(
         } else {
           var errMsg = 'Resend API error (HTTP ' + res.statusCode + ')'
           try {
-            if (res.json && res.json.message) {
-              errMsg = String(res.json.message)
+            if (res.json) {
+              if (res.json.message) {
+                errMsg = String(res.json.message)
+              } else if (res.json.error) {
+                errMsg = String(res.json.error)
+              }
             }
           } catch (_) {}
+          var lowerErrMsg = errMsg.toLowerCase()
+          if (
+            res.statusCode === 401 ||
+            res.statusCode === 403 ||
+            lowerErrMsg.indexOf('api key') !== -1 ||
+            lowerErrMsg.indexOf('unauthorized') !== -1 ||
+            lowerErrMsg.indexOf('authentication') !== -1
+          ) {
+            errMsg +=
+              ' — A chave RESEND_API_KEY está ausente ou inválida. Acesse Configurações de Domínio para verificar.'
+          } else if (
+            lowerErrMsg.indexOf('verify') !== -1 ||
+            lowerErrMsg.indexOf('domain') !== -1 ||
+            lowerMsg.indexOf('dominio') !== -1 ||
+            lowerErrMsg.indexOf('sender') !== -1 ||
+            lowerErrMsg.indexOf('not allowed') !== -1
+          ) {
+            errMsg +=
+              ' — O remetente (sender_email) ou domínio não está verificado no Resend. Acesse Configurações de Domínio para instruções.'
+          } else if (res.statusCode === 429) {
+            errMsg +=
+              ' — Limite de envio atingido (rate limit). Aguarde alguns minutos e tente novamente.'
+          }
           log.set('body', trackedBody)
           log.set('status', 'falhou')
           log.set('error_message', errMsg)
@@ -175,7 +202,29 @@ routerAdd(
     campaign.set('total_failed', failed)
     $app.save(campaign)
 
-    return e.json(200, { sent: sent, failed: failed, total: filteredContacts.length })
+    var resultSummary = { sent: sent, failed: failed, total: filteredContacts.length }
+    if (failed > 0 && sent === 0) {
+      var firstError = ''
+      for (var j = 0; j < filteredContacts.length; j++) {
+        try {
+          var errLog = $app.findRecordsByFilter(
+            'email_logs',
+            'campaign = "' + campaignId + '" && status = "falhou"',
+            '-created',
+            1,
+            0,
+          )
+          if (errLog.length > 0) {
+            firstError = errLog[0].getString('error_message') || ''
+            break
+          }
+        } catch (_) {}
+      }
+      if (firstError) {
+        resultSummary.first_error = firstError
+      }
+    }
+    return e.json(200, resultSummary)
   },
   $apis.requireAuth(),
 )

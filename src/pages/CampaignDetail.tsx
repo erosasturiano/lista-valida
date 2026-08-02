@@ -1,6 +1,16 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Send, CheckCircle2, XCircle, Clock, Trash2, BarChart3 } from 'lucide-react'
+import {
+  ArrowLeft,
+  Send,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Trash2,
+  BarChart3,
+  AlertTriangle,
+  Settings,
+} from 'lucide-react'
 import {
   getCampaign,
   getCampaignLogs,
@@ -23,6 +33,75 @@ import {
 } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
+
+export interface FailureDiagnostic {
+  totalErrors: number
+  uniqueErrors: Map<string, number>
+  isConfigIssue: boolean
+  isDomainIssue: boolean
+  isApiKeyIssue: boolean
+  guidance: string[]
+}
+
+function analyzeFailures(logs: EmailLogRecord[]): FailureDiagnostic {
+  const failedLogs = logs.filter((l) => l.status === 'falhou')
+  const uniqueErrors = new Map<string, number>()
+  const guidance: string[] = []
+  let isConfigIssue = false
+  let isDomainIssue = false
+  let isApiKeyIssue = false
+
+  for (const log of failedLogs) {
+    const msg = log.error_message || 'Erro desconhecido'
+    uniqueErrors.set(msg, (uniqueErrors.get(msg) || 0) + 1)
+    const lower = msg.toLowerCase()
+    if (
+      lower.includes('verify') ||
+      lower.includes('domain') ||
+      lower.includes('domínio') ||
+      lower.includes('sender') ||
+      lower.includes('remetente')
+    ) {
+      isDomainIssue = true
+      isConfigIssue = true
+    }
+    if (
+      lower.includes('api key') ||
+      lower.includes('unauthorized') ||
+      lower.includes('401') ||
+      lower.includes('authentication')
+    ) {
+      isApiKeyIssue = true
+      isConfigIssue = true
+    }
+  }
+
+  if (isDomainIssue) {
+    guidance.push(
+      'O domínio do remetente (sender_email) não está verificado no Resend. Acesse Configurações de Domínio para verificar o domínio e o e-mail remetente.',
+    )
+  }
+  if (isApiKeyIssue) {
+    guidance.push(
+      'A chave de API do Resend (RESEND_API_KEY) está ausente ou inválida. Verifique a configuração em Configurações de Domínio.',
+    )
+  }
+  if (!isConfigIssue && failedLogs.length > 0) {
+    guidance.push(
+      'As falhas não parecem ser de configuração. Verifique as mensagens de erro individuais abaixo para mais detalhes.',
+    )
+  }
+
+  return {
+    totalErrors: failedLogs.length,
+    uniqueErrors,
+    isConfigIssue,
+    isDomainIssue,
+    isApiKeyIssue,
+    guidance,
+  }
+}
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>()
@@ -59,18 +138,39 @@ export default function CampaignDetail() {
     if (id) fetchData()
   })
 
+  const diagnostic = useMemo(() => analyzeFailures(logs), [logs])
+
   const handleSend = async () => {
     if (!id) return
     setSending(true)
     try {
       const result = await sendCampaign(id)
-      toast({
-        title: 'Disparo concluído!',
-        description: `${result.sent} enviados, ${result.failed} falhas.`,
-      })
+      if (result.failed > 0 && result.sent === 0) {
+        toast({
+          title: 'Disparo falhou',
+          description: result.first_error
+            ? `Todos os ${result.failed} envios falharam. Erro: ${result.first_error}`
+            : `Todos os ${result.failed} envios falharam. Verifique os detalhes abaixo.`,
+          variant: 'destructive',
+        })
+      } else if (result.failed > 0) {
+        toast({
+          title: 'Disparo parcial',
+          description: `${result.sent} enviados, ${result.failed} falhas. Verifique os erros abaixo.`,
+        })
+      } else {
+        toast({
+          title: 'Disparo concluído!',
+          description: `${result.sent} e-mails enviados com sucesso.`,
+        })
+      }
       fetchData()
-    } catch {
-      toast({ title: 'Erro ao disparar campanha' })
+    } catch (err) {
+      toast({
+        title: 'Erro ao disparar campanha',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
     } finally {
       setSending(false)
     }
@@ -90,6 +190,9 @@ export default function CampaignDetail() {
   if (loading || !campaign) {
     return <div className="p-8 text-center text-slate-500 text-xs">Carregando campanha...</div>
   }
+
+  const failedCount = logs.filter((l) => l.status === 'falhou').length
+  const sentCount = logs.filter((l) => l.status === 'enviado').length
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto pb-12">
@@ -127,6 +230,72 @@ export default function CampaignDetail() {
         </div>
       </div>
 
+      {failedCount > 0 && (
+        <Card className="border-rose-200 bg-rose-50/50 shadow-xs">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-bold text-rose-900 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Diagnóstico de Falhas ({failedCount} {failedCount === 1 ? 'falha' : 'falhas'})
+            </CardTitle>
+            <CardDescription className="text-xs text-rose-700">
+              {sentCount === 0
+                ? 'Nenhum e-mail foi entregue. Veja as causas abaixo.'
+                : `${sentCount} e-mails entregues, ${failedCount} falharam.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {diagnostic.uniqueErrors.size > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-slate-700">
+                  Mensagens de erro encontradas:
+                </p>
+                {Array.from(diagnostic.uniqueErrors.entries()).map(([msg, count], idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 p-2 rounded-lg bg-white border border-rose-100"
+                  >
+                    <XCircle className="w-3.5 h-3.5 text-rose-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[11px] text-slate-800 break-words">{msg}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {count} {count === 1 ? 'ocorrência' : 'ocorrências'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {diagnostic.guidance.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-slate-700">O que fazer:</p>
+                <ul className="space-y-1">
+                  {diagnostic.guidance.map((g, idx) => (
+                    <li key={idx} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                      <span className="text-indigo-500 mt-0.5">→</span>
+                      <span>{g}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {diagnostic.isConfigIssue && (
+              <Button
+                asChild
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 h-8"
+              >
+                <Link to="/configuracoes">
+                  <Settings className="w-3.5 h-3.5" />
+                  Ir para Configurações de Domínio
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card className="border-slate-200 shadow-xs">
@@ -150,6 +319,12 @@ export default function CampaignDetail() {
                   {campaign.sender_name} &lt;{campaign.sender_email}&gt;
                 </p>
               )}
+              {!campaign.sender_email && (
+                <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-700">
+                  <strong>Atenção:</strong> Nenhum remetente (sender_email) configurado. Defina um
+                  e-mail remetente verificado no Resend antes de disparar.
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -161,12 +336,13 @@ export default function CampaignDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="max-h-80 overflow-y-auto">
+                <div className="max-h-96 overflow-y-auto">
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead className="text-xs font-bold">Destinatário</TableHead>
                         <TableHead className="text-xs font-bold">Status</TableHead>
+                        <TableHead className="text-xs font-bold">Erro</TableHead>
                         <TableHead className="text-xs font-bold">Enviado em</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -190,6 +366,15 @@ export default function CampaignDetail() {
                                 <XCircle className="w-3 h-3 mr-1" />
                                 Falhou
                               </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="max-w-[200px]">
+                            {log.error_message ? (
+                              <p className="text-[10px] text-rose-600 break-words">
+                                {log.error_message}
+                              </p>
+                            ) : (
+                              <span className="text-[10px] text-slate-300">—</span>
                             )}
                           </TableCell>
                           <TableCell className="text-[11px] text-slate-500">
@@ -239,6 +424,12 @@ export default function CampaignDetail() {
                   Categoria: <strong>{campaign.filter_category || 'todas'}</strong>
                 </p>
               </div>
+              {failedCount > 0 && (
+                <p className="text-[10px] text-slate-500 italic">
+                  Você pode re-disparar a campanha após corrigir as configurações. Apenas contatos
+                  sem e-mail válido ou não filtrados serão ignorados.
+                </p>
+              )}
               <Button
                 onClick={handleSend}
                 disabled={sending || campaign.status === 'enviando'}
@@ -252,7 +443,7 @@ export default function CampaignDetail() {
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    Disparar E-mails
+                    {failedCount > 0 ? 'Re-disparar E-mails' : 'Disparar E-mails'}
                   </>
                 )}
               </Button>
