@@ -4,9 +4,12 @@ import pb from '@/lib/pocketbase/client'
 interface AuthContextType {
   user: any
   isAuthenticated: boolean
+  isAdmin: boolean
   signUp: (email: string, password: string, name?: string) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
+  signInWith: (provider: string) => Promise<{ error: any }>
   signOut: () => void
+  updateProfile: (data: { sender_name?: string; sender_email?: string }) => Promise<{ error: any }>
   loading: boolean
 }
 
@@ -22,6 +25,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(pb.authStore.isValid ? pb.authStore.record : null)
   const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid)
   const [loading, setLoading] = useState(true)
+
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange((_token, record) => {
@@ -67,8 +72,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const signInWith = async (provider: string) => {
+    try {
+      await pb.collection('users').authWithOAuth2({ provider })
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
+  }
+
   const signOut = () => {
     pb.authStore.clear()
+  }
+
+  const updateProfile = async (data: { sender_name?: string; sender_email?: string }) => {
+    if (!pb.authStore.record) return { error: new Error('Not authenticated') }
+    try {
+      const updated = await pb.collection('users').update(pb.authStore.record.id, data)
+      pb.authStore.save(pb.authStore.token, updated)
+      setUser(updated)
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
   }
 
   return (
@@ -76,9 +102,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         isAuthenticated,
+        isAdmin,
         signUp,
         signIn,
+        signInWith,
         signOut,
+        updateProfile,
         loading,
       }}
     >

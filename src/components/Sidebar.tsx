@@ -11,6 +11,8 @@ import {
   FileText,
   BarChart3,
   Ban,
+  Settings,
+  ShieldCheck,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -23,7 +25,7 @@ interface SidebarProps {
 
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const location = useLocation()
-  const { user, signOut } = useAuth()
+  const { user, isAdmin, signOut } = useAuth()
 
   const navItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -33,6 +35,8 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     { label: 'Campanhas', path: '/campanhas', icon: Mail },
     { label: 'Relatório de Entregas', path: '/relatorio-entregas', icon: BarChart3 },
     { label: 'Lista de bloqueados', path: '/bloqueados', icon: Ban },
+    { label: 'Minha Conta', path: '/conta', icon: Settings },
+    ...(isAdmin ? [{ label: 'Usuários', path: '/usuarios', icon: ShieldCheck }] : []),
     { label: 'Mailing (listas)', path: '/eventos', icon: Calendar },
   ]
 
@@ -48,7 +52,6 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800">
-      {/* Brand Header */}
       <div className="p-5 flex items-center justify-between border-b border-slate-800">
         <Link to="/dashboard" className="flex items-center gap-3" onClick={onCloseMobile}>
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-indigo-400 flex items-center justify-center shadow-md">
@@ -75,7 +78,6 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         )}
       </div>
 
-      {/* Navigation Links */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive =
@@ -109,7 +111,6 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         })}
       </nav>
 
-      {/* User Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-900/50">
         <div className="flex items-center gap-3">
           <Avatar className="h-9 w-9 border border-indigo-500/30">

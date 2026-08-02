@@ -16,16 +16,44 @@ routerAdd('POST', '/backend/v1/unsubscribe/{logId}', (e) => {
 
   const blockedCol = $app.findCollectionByNameOrId('blocked_contacts')
 
+  var owner = ''
+  var campaignId = log.getString('campaign')
+  if (campaignId) {
+    try {
+      var campaign = $app.findRecordById('email_campaigns', campaignId)
+      owner = campaign.getString('owner')
+    } catch (_) {}
+  }
+  if (!owner) {
+    var contactId = log.getString('contact')
+    if (contactId) {
+      try {
+        var contact = $app.findRecordById('mailing_contacts', contactId)
+        owner = contact.getString('owner')
+      } catch (_) {}
+    }
+  }
+
   let existing = null
-  try {
-    existing = $app.findFirstRecordByData('blocked_contacts', 'email', email)
-  } catch (_) {}
+  if (owner) {
+    try {
+      existing = $app.findFirstRecordByFilter(
+        'blocked_contacts',
+        'owner = "' + owner + '" && email = "' + email + '"',
+      )
+    } catch (_) {}
+  } else {
+    try {
+      existing = $app.findFirstRecordByData('blocked_contacts', 'email', email)
+    } catch (_) {}
+  }
 
   if (existing) {
     existing.set('reason', 'Descadastro')
     existing.set('source', 'link_descadastro')
     if (body.reason) existing.set('notes', body.reason)
     existing.set('blocked_at', new Date().toISOString())
+    if (owner && !existing.getString('owner')) existing.set('owner', owner)
     $app.save(existing)
   } else {
     const record = new Record(blockedCol)
@@ -35,6 +63,7 @@ routerAdd('POST', '/backend/v1/unsubscribe/{logId}', (e) => {
     record.set('source', 'link_descadastro')
     if (body.reason) record.set('notes', body.reason)
     record.set('blocked_at', new Date().toISOString())
+    if (owner) record.set('owner', owner)
 
     const contactId = log.getString('contact')
     if (contactId) {

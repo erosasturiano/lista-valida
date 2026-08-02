@@ -21,6 +21,7 @@ routerAdd(
     var senderEmail = campaign.getString('sender_email') || ''
     var fromField = senderName ? senderName + ' <' + senderEmail + '>' : senderEmail
 
+    var owner = campaign.getString('owner')
     const subjectTemplate = campaign.getString('subject')
     const bodyTemplate = campaign.getString('body_template')
 
@@ -37,7 +38,14 @@ routerAdd(
 
     var blockedEmails = {}
     try {
-      var blockedRecords = $app.findRecordsByFilter('blocked_contacts', '', '-created', 500, 0)
+      var blockedFilter = owner ? 'owner = "' + owner + '"' : ''
+      var blockedRecords = $app.findRecordsByFilter(
+        'blocked_contacts',
+        blockedFilter,
+        '-created',
+        500,
+        0,
+      )
       for (var b = 0; b < blockedRecords.length; b++) {
         blockedEmails[blockedRecords[b].getString('email').toLowerCase()] = true
       }

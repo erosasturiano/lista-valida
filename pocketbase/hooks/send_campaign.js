@@ -34,13 +34,14 @@ routerAdd(
     var fromField = senderName ? senderName + ' <' + senderEmail + '>' : senderEmail
 
     const eventId = campaign.getString('event')
+    var owner = campaign.getString('owner')
     const subjectTemplate = campaign.getString('subject')
     const bodyTemplate = campaign.getString('body_template')
     const filterRsvp = campaign.getString('filter_rsvp')
     const filterPriority = campaign.getString('filter_priority')
     const filterCategory = campaign.getString('filter_category')
 
-    const filterStr = 'event = "' + eventId + '"'
+    const filterStr = 'event = "' + eventId + '" && owner = "' + owner + '"'
     let contacts = []
     try {
       contacts = $app.findRecordsByFilter('mailing_contacts', filterStr, '-created', 500, 0)
@@ -74,7 +75,13 @@ routerAdd(
 
     var blockedEmails = {}
     try {
-      var blockedRecords = $app.findRecordsByFilter('blocked_contacts', '', '-created', 500, 0)
+      var blockedRecords = $app.findRecordsByFilter(
+        'blocked_contacts',
+        'owner = "' + owner + '"',
+        '-created',
+        500,
+        0,
+      )
       for (var b = 0; b < blockedRecords.length; b++) {
         blockedEmails[blockedRecords[b].getString('email').toLowerCase()] = true
       }
@@ -133,6 +140,7 @@ routerAdd(
       log.set('recipient_name', name)
       log.set('subject', subject)
       log.set('click_count', 0)
+      log.set('owner', owner)
       $app.save(log)
 
       var trackClickBase = baseUrl + '/backend/v1/track-click/' + log.id + '?url='
@@ -214,7 +222,7 @@ routerAdd(
           } else if (
             lowerErrMsg.indexOf('verify') !== -1 ||
             lowerErrMsg.indexOf('domain') !== -1 ||
-            lowerMsg.indexOf('dominio') !== -1 ||
+            lowerErrMsg.indexOf('dominio') !== -1 ||
             lowerErrMsg.indexOf('sender') !== -1 ||
             lowerErrMsg.indexOf('not allowed') !== -1
           ) {

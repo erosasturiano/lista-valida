@@ -13,9 +13,16 @@ routerAdd(
       const embedRes = $ai.embed({ input: query })
       const queryVector = embedRes.data[0].embedding
 
+      var auth = e.requestInfo().auth
+      var authId = auth ? auth.id : ''
+      var authRole = auth ? auth.getString('role') : ''
+
       let filterExpr = ''
+      if (authRole !== 'admin' && authId) {
+        filterExpr = `owner = "${authId}"`
+      }
       if (eventId) {
-        filterExpr = `event = "${eventId}"`
+        filterExpr = filterExpr ? `${filterExpr} && event = "${eventId}"` : `event = "${eventId}"`
       }
 
       const results = $vectors.search(e, 'mailing_contacts', {

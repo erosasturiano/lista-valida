@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-08-02T11:56:15.678Z",
+  "generatedAt": "2026-08-02T17:40:42.244Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "id = @request.auth.id",
-        "view": "id = @request.auth.id",
+        "list": "id = @request.auth.id || @request.auth.role = \"admin\"",
+        "view": "id = @request.auth.id || @request.auth.role = \"admin\"",
         "create": "",
-        "update": "id = @request.auth.id",
-        "delete": "id = @request.auth.id"
+        "update": "id = @request.auth.id || @request.auth.role = \"admin\"",
+        "delete": "id = @request.auth.id || @request.auth.role = \"admin\""
       },
       "fields": [
         {
@@ -37,6 +37,25 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["admin", "user"]
+        },
+        {
+          "name": "sender_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sender_email",
+          "type": "email",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -48,11 +67,11 @@
       "name": "events",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "view": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "delete": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")"
       },
       "fields": [
         {
@@ -86,19 +105,29 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
-      "indexes": ["CREATE INDEX idx_events_created ON events (created DESC)"]
+      "indexes": [
+        "CREATE INDEX idx_events_created ON events (created DESC)",
+        "CREATE INDEX `idx_events_owner` ON `events` (owner)"
+      ]
     },
     {
       "name": "mailing_contacts",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "view": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "delete": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")"
       },
       "fields": [
         {
@@ -240,6 +269,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
@@ -247,18 +283,19 @@
         "CREATE INDEX idx_mailing_contacts_rsvp ON mailing_contacts (rsvp)",
         "CREATE INDEX idx_mailing_contacts_status ON mailing_contacts (classification_status)",
         "CREATE INDEX idx_mailing_contacts_category ON mailing_contacts (role_category)",
-        "CREATE INDEX idx_mailing_contacts_created ON mailing_contacts (created DESC)"
+        "CREATE INDEX idx_mailing_contacts_created ON mailing_contacts (created DESC)",
+        "CREATE INDEX `idx_mailing_contacts_owner` ON `mailing_contacts` (owner)"
       ]
     },
     {
       "name": "email_campaigns",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "view": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "delete": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")"
       },
       "fields": [
         {
@@ -362,22 +399,30 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_email_campaigns_event ON email_campaigns (event)",
-        "CREATE INDEX idx_email_campaigns_status ON email_campaigns (status)"
+        "CREATE INDEX idx_email_campaigns_status ON email_campaigns (status)",
+        "CREATE INDEX `idx_email_campaigns_owner` ON `email_campaigns` (owner)"
       ]
     },
     {
       "name": "email_logs",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "view": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "delete": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")"
       },
       "fields": [
         {
@@ -468,24 +513,32 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_email_logs_campaign ON email_logs (campaign)",
         "CREATE INDEX idx_email_logs_status ON email_logs (status)",
         "CREATE INDEX `idx_email_logs_opened_at` ON `email_logs` (opened_at)",
-        "CREATE INDEX `idx_email_logs_clicked_at` ON `email_logs` (clicked_at)"
+        "CREATE INDEX `idx_email_logs_clicked_at` ON `email_logs` (clicked_at)",
+        "CREATE INDEX `idx_email_logs_owner` ON `email_logs` (owner)"
       ]
     },
     {
       "name": "email_templates",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "view": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "delete": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")"
       },
       "fields": [
         {
@@ -544,22 +597,30 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_email_templates_category ON email_templates (category)",
-        "CREATE INDEX idx_email_templates_created ON email_templates (created DESC)"
+        "CREATE INDEX idx_email_templates_created ON email_templates (created DESC)",
+        "CREATE INDEX `idx_email_templates_owner` ON `email_templates` (owner)"
       ]
     },
     {
       "name": "blocked_contacts",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "view": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")",
+        "delete": "@request.auth.id != '' && (owner = @request.auth.id || @request.auth.role = \"admin\")"
       },
       "fields": [
         {
@@ -627,13 +688,21 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "owner",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": [
-        "CREATE UNIQUE INDEX idx_blocked_contacts_email ON blocked_contacts (email) WHERE email != \"\"",
         "CREATE INDEX idx_blocked_contacts_reason ON blocked_contacts (reason)",
         "CREATE INDEX idx_blocked_contacts_event ON blocked_contacts (event)",
-        "CREATE INDEX idx_blocked_contacts_blocked_at ON blocked_contacts (blocked_at)"
+        "CREATE INDEX idx_blocked_contacts_blocked_at ON blocked_contacts (blocked_at)",
+        "CREATE INDEX `idx_blocked_contacts_owner` ON `blocked_contacts` (owner)",
+        "CREATE UNIQUE INDEX `idx_blocked_contacts_owner_email` ON `blocked_contacts` (owner, email) WHERE email != '' AND owner != ''"
       ]
     }
   ]

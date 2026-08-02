@@ -23,16 +23,50 @@ routerAdd('POST', '/backend/v1/resend-webhook', (e) => {
 
   var blockedCol = $app.findCollectionByNameOrId('blocked_contacts')
 
-  var existing = null
+  var owner = ''
   try {
-    existing = $app.findFirstRecordByData('blocked_contacts', 'email', email)
+    var logs = $app.findRecordsByFilter(
+      'email_logs',
+      'recipient_email = "' + email + '"',
+      '-created',
+      1,
+      0,
+    )
+    if (logs.length > 0) {
+      var campaignId = logs[0].getString('campaign')
+      if (campaignId) {
+        var campaign = $app.findRecordById('email_campaigns', campaignId)
+        owner = campaign.getString('owner')
+      }
+    }
   } catch (_) {}
+  if (!owner) {
+    try {
+      var contact = $app.findFirstRecordByData('mailing_contacts', 'email', email)
+      owner = contact.getString('owner')
+    } catch (_) {}
+  }
+
+  var existing = null
+  if (owner) {
+    try {
+      existing = $app.findFirstRecordByFilter(
+        'blocked_contacts',
+        'owner = "' + owner + '" && email = "' + email + '"',
+      )
+    } catch (_) {}
+  } else {
+    try {
+      existing = $app.findFirstRecordByData('blocked_contacts', 'email', email)
+    } catch (_) {}
+  }
 
   if (existing) {
     existing.set('reason', reason)
     existing.set('source', 'provedor')
     if (data.id) existing.set('notes', 'Resend ID: ' + data.id)
     existing.set('blocked_at', new Date().toISOString())
+    if (owner && !existing.getString('owner')) existing.set('owner', owner)
     $app.save(existing)
   } else {
     var record = new Record(blockedCol)
@@ -42,6 +76,7 @@ routerAdd('POST', '/backend/v1/resend-webhook', (e) => {
     record.set('source', 'provedor')
     if (data.id) record.set('notes', 'Resend ID: ' + data.id)
     record.set('blocked_at', new Date().toISOString())
+    if (owner) record.set('owner', owner)
 
     try {
       var contact = $app.findFirstRecordByData('mailing_contacts', 'email', email)

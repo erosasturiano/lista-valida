@@ -9,6 +9,14 @@ routerAdd(
     const record = $app.findRecordById('mailing_contacts', id)
     if (!record) return e.notFoundError('Contato não encontrado')
 
+    var auth = e.requestInfo().auth
+    var authId = auth ? auth.id : ''
+    var authRole = auth ? auth.getString('role') : ''
+    var ownerId = record.getString('owner')
+    if (ownerId && authId && ownerId !== authId && authRole !== 'admin') {
+      return e.forbiddenError('Acesso negado a este contato')
+    }
+
     const name = record.getString('name')
     const company = record.getString('company')
     const rawRole = record.getString('raw_role')

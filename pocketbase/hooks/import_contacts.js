@@ -13,6 +13,8 @@ routerAdd(
     }
 
     const contactsCol = $app.findCollectionByNameOrId('mailing_contacts')
+    var auth = e.requestInfo().auth
+    var authId = auth ? auth.id : ''
     let imported = 0
     let skipped = 0
     const errors = []
@@ -79,6 +81,7 @@ routerAdd(
 
         rec.set('classification_status', 'Pendente')
         rec.set('priority', 'Média')
+        if (authId) rec.set('owner', authId)
 
         $app.save(rec)
         importedIds.push(rec.id)

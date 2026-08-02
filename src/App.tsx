@@ -16,6 +16,8 @@ import ReportDeliveries from './pages/ReportDeliveries'
 import DomainSettings from './pages/DomainSettings'
 import BlockedContacts from './pages/BlockedContacts'
 import Unsubscribe from './pages/Unsubscribe'
+import Users from './pages/Users'
+import AccountSettings from './pages/AccountSettings'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
@@ -42,6 +44,8 @@ const App = () => (
             <Route path="/relatorio-entregas" element={<ReportDeliveries />} />
             <Route path="/configuracoes" element={<DomainSettings />} />
             <Route path="/bloqueados" element={<BlockedContacts />} />
+            <Route path="/conta" element={<AccountSettings />} />
+            <Route path="/usuarios" element={<Users />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
