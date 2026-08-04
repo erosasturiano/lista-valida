@@ -10,7 +10,6 @@ export type RoleCategory =
   | 'Estagiário'
   | 'Consultor/Autônomo'
   | 'Outro'
-
 export type RSVPStatus = 'Aguardando' | 'Confirmou' | 'Recusou'
 export type ClassificationStatus = 'Pendente' | 'Classificado' | 'Revisado'
 export type PriorityLevel = 'Alta' | 'Média' | 'Baixa'
@@ -46,13 +45,13 @@ export const getContacts = async (
   eventId?: string,
   filterStr?: string,
 ): Promise<ContactRecord[]> => {
-  let filter = eventId ? `event = "${eventId}"` : ''
-  if (filterStr) {
-    filter = filter ? `(${filter}) && ${filterStr}` : filterStr
-  }
+  const filters: string[] = []
+  if (eventId) filters.push(`event = "${eventId}"`)
+  if (filterStr) filters.push(filterStr)
   return pb.collection('mailing_contacts').getFullList<ContactRecord>({
-    filter,
     sort: '-created',
+    filter: filters.length > 0 ? filters.join(' && ') : undefined,
+    expand: 'event',
   })
 }
 
@@ -61,7 +60,8 @@ export const getContact = async (id: string): Promise<ContactRecord> => {
 }
 
 export const createContact = async (data: Partial<ContactRecord>): Promise<ContactRecord> => {
-  return pb.collection('mailing_contacts').create<ContactRecord>(data)
+  const userId = pb.authStore.record?.id
+  return pb.collection('mailing_contacts').create<ContactRecord>({ ...data, owner: userId })
 }
 
 export const updateContact = async (
@@ -76,11 +76,7 @@ export const deleteContact = async (id: string): Promise<boolean> => {
 }
 
 export const classifyContact = async (id: string): Promise<ContactRecord> => {
-  return pb.send('/backend/v1/classify', {
-    method: 'POST',
-    body: JSON.stringify({ id }),
-    headers: { 'Content-Type': 'application/json' },
-  })
+  return pb.send(`/backend/v1/classify-contact/${id}`, { method: 'POST' })
 }
 
 export interface ImportResult {
@@ -103,7 +99,7 @@ export const importContacts = async (
     has_degree?: string
     notes?: string
   }>,
-  allowDuplicates: boolean = false,
+  allowDuplicates?: boolean,
 ): Promise<ImportResult> => {
   return pb.send('/backend/v1/import-contacts', {
     method: 'POST',
@@ -126,9 +122,9 @@ export const searchContacts = async (
   query: string,
   eventId?: string,
 ): Promise<{ items: SearchHit[] }> => {
-  return pb.send('/backend/v1/contacts/search', {
+  return pb.send('/backend/v1/search-contacts', {
     method: 'POST',
-    body: JSON.stringify({ query, event_id: eventId, k: 5 }),
+    body: JSON.stringify({ query, event_id: eventId }),
     headers: { 'Content-Type': 'application/json' },
   })
 }

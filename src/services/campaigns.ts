@@ -29,36 +29,32 @@ export interface EmailLogRecord {
   recipient_name?: string
   subject?: string
   body?: string
-  status: 'enviado' | 'falhou'
+  status?: 'enviado' | 'falhou'
   error_message?: string
   sent_at?: string
+  created: string
+  updated: string
   opened_at?: string
   clicked_at?: string
   click_count?: number
-  created: string
-  updated: string
+  expand?: { contact?: { name: string; email: string } }
 }
 
 export const getCampaigns = async (eventId?: string): Promise<CampaignRecord[]> => {
-  const filter = eventId ? `event = "${eventId}"` : ''
+  const filter = eventId ? `event = "${eventId}"` : undefined
   return pb.collection('email_campaigns').getFullList<CampaignRecord>({
-    filter,
     sort: '-created',
+    filter,
     expand: 'event',
   })
 }
 
-export const getReportCampaigns = async (
-  eventId?: string,
-  status?: string,
-): Promise<CampaignRecord[]> => {
-  const filters: string[] = []
-  if (eventId) filters.push(`event = "${eventId}"`)
-  if (status) filters.push(`status = "${status}"`)
-  const filter = filters.length > 0 ? filters.join(' && ') : ''
+export const getReportCampaigns = async (eventId?: string): Promise<CampaignRecord[]> => {
+  const baseFilter = 'status != "rascunho"'
+  const filter = eventId ? `event = "${eventId}" && ${baseFilter}` : baseFilter
   return pb.collection('email_campaigns').getFullList<CampaignRecord>({
-    filter,
     sort: '-created',
+    filter,
     expand: 'event',
   })
 }
@@ -68,7 +64,12 @@ export const getCampaign = async (id: string): Promise<CampaignRecord> => {
 }
 
 export const createCampaign = async (data: Partial<CampaignRecord>): Promise<CampaignRecord> => {
-  return pb.collection('email_campaigns').create<CampaignRecord>(data)
+  const userId = pb.authStore.record?.id
+  return pb.collection('email_campaigns').create<CampaignRecord>({
+    ...data,
+    owner: userId,
+    status: data.status || 'rascunho',
+  })
 }
 
 export const updateCampaign = async (
@@ -84,31 +85,20 @@ export const deleteCampaign = async (id: string): Promise<boolean> => {
 
 export const sendCampaign = async (
   id: string,
-): Promise<{
-  sent: number
-  failed: number
-  total: number
-  first_error?: string
-  ignored_blocked?: number
-}> => {
-  return pb.send(`/backend/v1/campaigns/${id}/send`, { method: 'POST' })
+): Promise<{ sent: number; failed: number; total: number }> => {
+  return pb.send(`/backend/v1/send-campaign/${id}`, { method: 'POST' })
 }
 
 export const retryCampaignFailures = async (
   id: string,
-): Promise<{
-  sent: number
-  failed: number
-  total: number
-  first_error?: string
-  ignored_blocked?: number
-}> => {
-  return pb.send(`/backend/v1/campaigns/${id}/retry-failures`, { method: 'POST' })
+): Promise<{ retried: number; stillFailed: number }> => {
+  return pb.send(`/backend/v1/retry-failures/${id}`, { method: 'POST' })
 }
 
 export const getCampaignLogs = async (campaignId: string): Promise<EmailLogRecord[]> => {
   return pb.collection('email_logs').getFullList<EmailLogRecord>({
     filter: `campaign = "${campaignId}"`,
     sort: '-created',
+    expand: 'contact',
   })
 }

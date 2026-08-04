@@ -1,34 +1,36 @@
 onRecordUpdateRequest(
   (e) => {
-    var colName = e.record.collectionName || ''
-    var mailingCols = [
-      'events',
-      'mailing_contacts',
-      'email_campaigns',
-      'email_logs',
-      'email_templates',
-      'blocked_contacts',
-    ]
-
-    if (mailingCols.indexOf(colName) !== -1) {
-      e.record.set('owner', e.record.original().getString('owner'))
+    const protectedByCollection = {
+      mailing_contacts: ['owner', 'event', 'created'],
+      email_campaigns: ['owner', 'event', 'created'],
+      email_logs: ['owner', 'campaign', 'created'],
+      email_templates: ['owner', 'created'],
+      blocked_contacts: ['owner', 'created'],
+      events: ['owner', 'created'],
     }
 
-    if (colName === 'users') {
-      var auth = e.requestInfo().auth
-      var isAdmin = auth && auth.getString('role') === 'admin'
-      if (!isAdmin) {
-        e.record.set('role', e.record.original().getString('role'))
+    const collection = e.record.collectionName
+    const fields = protectedByCollection[collection]
+    if (!fields) {
+      e.next()
+      return
+    }
+
+    const original = e.record.original()
+    for (const field of fields) {
+      const currentVal = e.record.get(field)
+      const originalVal = original.get(field)
+      if (currentVal !== originalVal) {
+        e.record.set(field, originalVal)
       }
     }
 
     e.next()
   },
-  'events',
   'mailing_contacts',
   'email_campaigns',
   'email_logs',
   'email_templates',
   'blocked_contacts',
-  'users',
+  'events',
 )

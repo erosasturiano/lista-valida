@@ -3,93 +3,63 @@ routerAdd(
   '/backend/v1/import-contacts',
   (e) => {
     const body = e.requestInfo().body || {}
-    const eventId = body.event_id
-    const contacts = body.contacts
-    const allowDuplicates = !!body.allow_duplicates
+    const eventId = body.event_id || body.eventId || ''
+    const contacts = body.contacts || []
+    const allowDuplicates = body.allow_duplicates || body.allowDuplicates || false
+    const userId = e.auth?.id
 
-    if (!eventId) return e.badRequestError('ID do evento é obrigatório')
-    if (!Array.isArray(contacts) || contacts.length === 0) {
-      return e.badRequestError('Nenhum contato enviado para importação')
-    }
+    if (!userId) return e.unauthorizedError('Autenticação necessária')
+    if (!eventId) return e.badRequestError('event_id é obrigatório')
 
-    const contactsCol = $app.findCollectionByNameOrId('mailing_contacts')
-    var auth = e.requestInfo().auth
-    var authId = auth ? auth.id : ''
+    const col = $app.findCollectionByNameOrId('mailing_contacts')
     let imported = 0
     let skipped = 0
     const errors = []
     const importedIds = []
-    const seenEmails = new Set()
 
     for (let i = 0; i < contacts.length; i++) {
-      const item = contacts[i]
-      const rowNum = i + 1
-      const name = (item.name || '').trim()
-      const email = (item.email || '').trim().toLowerCase()
+      const c = contacts[i]
+      const rowNum = i + 2
 
-      if (!name) {
-        errors.push({ row: rowNum, reason: 'Nome do participante ausente' })
+      if (!c.name || !c.email) {
+        errors.push({ row: rowNum, reason: 'Nome e e-mail são obrigatórios' })
         continue
       }
-      if (!email || !email.includes('@')) {
-        errors.push({ row: rowNum, reason: 'Endereço de e-mail inválido ou ausente' })
-        continue
-      }
-
-      if (seenEmails.has(email) && !allowDuplicates) {
-        skipped++
-        continue
-      }
-      seenEmails.add(email)
 
       if (!allowDuplicates) {
         try {
           const existing = $app.findFirstRecordByFilter(
             'mailing_contacts',
-            'event = {:event} && email = {:email}',
-            { event: eventId, email: email },
+            'event = {:eventId} && email = {:email}',
+            eventId,
+            c.email,
           )
-          if (existing) {
-            skipped++
-            continue
-          }
+          skipped++
+          continue
         } catch (_) {}
       }
 
       try {
-        const rec = new Record(contactsCol)
-        rec.set('event', eventId)
-        rec.set('name', name)
-        rec.set('email', email)
-        rec.set('phone', (item.phone || '').trim())
-        rec.set('company', (item.company || '').trim())
-        rec.set('raw_role', (item.raw_role || '').trim())
-        rec.set('cnpj', (item.cnpj || '').trim())
-        rec.set('notes', (item.notes || '').trim())
+        const record = new Record(col)
+        record.set('event', eventId)
+        record.set('name', c.name)
+        record.set('email', c.email)
+        if (c.phone) record.set('phone', c.phone)
+        if (c.company) record.set('company', c.company)
+        if (c.raw_role) record.set('raw_role', c.raw_role)
+        if (c.cnpj) record.set('cnpj', c.cnpj)
+        if (c.rsvp) record.set('rsvp', c.rsvp)
+        if (c.has_degree) record.set('has_degree', c.has_degree)
+        if (c.notes) record.set('notes', c.notes)
+        record.set('classification_status', 'Pendente')
+        record.set('rsvp', c.rsvp || 'Aguardando')
+        record.set('owner', userId)
 
-        const rsvpInput = (item.rsvp || '').trim().toLowerCase()
-        let rsvpVal = 'Aguardando'
-        if (rsvpInput.includes('confirm')) rsvpVal = 'Confirmou'
-        else if (rsvpInput.includes('recus')) rsvpVal = 'Recusou'
-        rec.set('rsvp', rsvpVal)
-
-        const degreeInput = (item.has_degree || '').trim().toLowerCase()
-        let degreeVal = degreeInput.startsWith('s')
-          ? 'Sim'
-          : degreeInput.startsWith('n')
-            ? 'Não'
-            : ''
-        if (degreeVal) rec.set('has_degree', degreeVal)
-
-        rec.set('classification_status', 'Pendente')
-        rec.set('priority', 'Média')
-        if (authId) rec.set('owner', authId)
-
-        $app.save(rec)
-        importedIds.push(rec.id)
+        $app.save(record)
         imported++
+        importedIds.push(record.id)
       } catch (err) {
-        errors.push({ row: rowNum, reason: err.message || 'Erro ao salvar contato no banco' })
+        errors.push({ row: rowNum, reason: String(err.message || err) })
       }
     }
 

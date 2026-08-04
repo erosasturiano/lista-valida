@@ -12,7 +12,7 @@ import {
 } from '@/services/events'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useEventContext } from '@/contexts/event-context'
-import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { extractFieldErrors, getErrorMessage, type FieldErrors } from '@/lib/pocketbase/errors'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -119,7 +119,7 @@ export default function Events() {
       setDialogOpen(false)
     } catch (err) {
       setFieldErrors(extractFieldErrors(err))
-      toast({ title: 'Erro ao salvar mailing.' })
+      toast({ title: 'Erro ao salvar mailing.', description: getErrorMessage(err) })
     } finally {
       setSaving(false)
     }

@@ -22,7 +22,11 @@ export const createEvent = async (data: {
   event_date?: string
   description?: string
 }): Promise<EventRecord> => {
-  return pb.collection('events').create<EventRecord>(data)
+  const userId = pb.authStore.record?.id
+  return pb.collection('events').create<EventRecord>({
+    ...data,
+    owner: userId,
+  })
 }
 
 export const updateEvent = async (id: string, data: Partial<EventRecord>): Promise<EventRecord> => {
