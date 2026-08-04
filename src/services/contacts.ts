@@ -23,6 +23,7 @@ export interface ContactRecord {
   phone?: string
   company?: string
   raw_role?: string
+  cnpj?: string
   rsvp?: RSVPStatus
   has_degree?: 'Sim' | 'Não'
   classification_status?: ClassificationStatus
@@ -97,8 +98,10 @@ export const importContacts = async (
     phone?: string
     company?: string
     raw_role?: string
+    cnpj?: string
     rsvp?: string
     has_degree?: string
+    notes?: string
   }>,
   allowDuplicates: boolean = false,
 ): Promise<ImportResult> => {

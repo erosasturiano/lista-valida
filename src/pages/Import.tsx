@@ -8,11 +8,14 @@ import {
   Plus,
   Sparkles,
   CheckCircle2,
+  X,
+  AlertCircle,
 } from 'lucide-react'
 import { useEventContext } from '@/contexts/event-context'
 import { importContacts, classifyContact } from '@/services/contacts'
 import { createEvent } from '@/services/events'
 import { parseXLSXFile } from '@/lib/xlsx-parser'
+import { extractFieldErrors, getErrorMessage, type FieldErrors } from '@/lib/pocketbase/errors'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -45,6 +48,26 @@ import { useToast } from '@/hooks/use-toast'
 
 const TARGET_EVENT_NAME = 'Mailing DHO-7235a'
 
+const AVAILABLE_EXTRA_FIELDS = [
+  { value: 'raw_role', label: 'Cargo Original' },
+  { value: 'rsvp', label: 'Status RSVP' },
+  { value: 'has_degree', label: 'Possui Diploma' },
+  { value: 'notes', label: 'Observações' },
+]
+
+interface DefaultMapping {
+  name: string
+  email: string
+  phone: string
+  company: string
+  cnpj: string
+}
+
+interface ExtraFieldMapping {
+  field: string
+  column: string
+}
+
 export default function Import() {
   const { events, selectedEventId, refreshEvents, setSelectedEventId } = useEventContext()
   const { toast } = useToast()
@@ -52,31 +75,24 @@ export default function Import() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [csvRows, setCsvRows] = useState<string[][]>([])
-  const [mapping, setMapping] = useState<{
-    name: string
-    email: string
-    phone: string
-    company: string
-    raw_role: string
-    rsvp: string
-    has_degree: string
-  }>({
+  const [defaultMapping, setDefaultMapping] = useState<DefaultMapping>({
     name: '',
     email: '',
     phone: '',
     company: '',
-    raw_role: '',
-    rsvp: '',
-    has_degree: '',
+    cnpj: '',
   })
+  const [extraFields, setExtraFields] = useState<ExtraFieldMapping[]>([])
 
   const [targetEventId, setTargetEventId] = useState<string>(selectedEventId || '')
   const [allowDuplicates, setAllowDuplicates] = useState<boolean>(false)
   const [newEventOpen, setNewEventOpen] = useState(false)
   const [newEventName, setNewEventName] = useState('')
+  const [eventFieldErrors, setEventFieldErrors] = useState<FieldErrors>({})
 
   const [importing, setImporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
+  const [importError, setImportError] = useState<string>('')
   const [importReport, setImportReport] = useState<{
     imported: number
     skipped: number
@@ -118,16 +134,14 @@ export default function Import() {
     }
     setCsvHeaders(headers)
     setCsvRows(dataRows)
-    const autoMap = {
+    setDefaultMapping({
       name: headers.find((h) => /nome/i.test(h)) || '',
       email: headers.find((h) => /e-?mail/i.test(h)) || '',
       phone: headers.find((h) => /tel|fone|celular/i.test(h)) || '',
       company: headers.find((h) => /empresa|organiza/i.test(h)) || '',
-      raw_role: headers.find((h) => /cargo|fun\u00e7\u00e3o/i.test(h)) || '',
-      rsvp: headers.find((h) => /rsvp|confirma/i.test(h)) || '',
-      has_degree: headers.find((h) => /diploma|gradua/i.test(h)) || '',
-    }
-    setMapping(autoMap)
+      cnpj: headers.find((h) => /cnpj/i.test(h)) || '',
+    })
+    setExtraFields([])
     setStep(2)
   }
 
@@ -162,16 +176,10 @@ export default function Import() {
         const { headers, rows } = await parseXLSXFile(file)
         handleParsedData(headers, rows)
       } catch {
-        toast({
-          title: 'Erro ao processar XLSX',
-          description: 'Não foi possível ler o arquivo.',
-        })
+        toast({ title: 'Erro ao processar XLSX', description: 'Não foi possível ler o arquivo.' })
       }
     } else {
-      toast({
-        title: 'Formato não suportado',
-        description: 'Envie um arquivo .csv ou .xlsx',
-      })
+      toast({ title: 'Formato não suportado', description: 'Envie um arquivo .csv ou .xlsx' })
     }
     e.target.value = ''
   }
@@ -179,24 +187,31 @@ export default function Import() {
   const handleCreateNewEvent = async () => {
     if (!newEventName.trim()) return
     try {
+      setEventFieldErrors({})
       const created = await createEvent({ name: newEventName.trim() })
       await refreshEvents()
       setTargetEventId(created.id)
       setSelectedEventId(created.id)
+      setEventEnsured(true)
       setNewEventOpen(false)
       setNewEventName('')
       toast({ title: 'Mailing (lista) criado com sucesso!' })
-    } catch {
-      toast({ title: 'Erro ao criar evento.' })
+    } catch (err) {
+      const fieldErrs = extractFieldErrors(err)
+      setEventFieldErrors(fieldErrs)
+      toast({
+        title: 'Erro ao criar mailing (lista)',
+        description: getErrorMessage(err),
+      })
     }
   }
 
   const handleStartImport = async () => {
     if (!targetEventId) {
-      toast({ title: 'Selecione um evento para associar os contatos.' })
+      toast({ title: 'Selecione um mailing (lista) para associar os contatos.' })
       return
     }
-    if (!mapping.name || !mapping.email) {
+    if (!defaultMapping.name || !defaultMapping.email) {
       toast({
         title: 'Mapeamento incompleto',
         description: 'Nome e E-mail são campos obrigatórios.',
@@ -208,18 +223,24 @@ export default function Import() {
     setImporting(true)
     setImportProgress(20)
     setImportReport(null)
+    setImportError('')
     setClassifiedCount(0)
 
     const idx = (key: string) => csvHeaders.indexOf(key)
-    const payload = csvRows.map((row) => ({
-      name: idx(mapping.name) >= 0 ? row[idx(mapping.name)] : '',
-      email: idx(mapping.email) >= 0 ? row[idx(mapping.email)] : '',
-      phone: idx(mapping.phone) >= 0 ? row[idx(mapping.phone)] : '',
-      company: idx(mapping.company) >= 0 ? row[idx(mapping.company)] : '',
-      raw_role: idx(mapping.raw_role) >= 0 ? row[idx(mapping.raw_role)] : '',
-      rsvp: idx(mapping.rsvp) >= 0 ? row[idx(mapping.rsvp)] : '',
-      has_degree: idx(mapping.has_degree) >= 0 ? row[idx(mapping.has_degree)] : '',
-    }))
+    const payload = csvRows.map((row) => {
+      const obj: Record<string, string> = {
+        name: idx(defaultMapping.name) >= 0 ? row[idx(defaultMapping.name)] : '',
+        email: idx(defaultMapping.email) >= 0 ? row[idx(defaultMapping.email)] : '',
+        phone: idx(defaultMapping.phone) >= 0 ? row[idx(defaultMapping.phone)] : '',
+        company: idx(defaultMapping.company) >= 0 ? row[idx(defaultMapping.company)] : '',
+        cnpj: idx(defaultMapping.cnpj) >= 0 ? row[idx(defaultMapping.cnpj)] : '',
+      }
+      extraFields.forEach(({ field, column }) => {
+        const colIdx = csvHeaders.indexOf(column)
+        if (colIdx >= 0 && field) obj[field] = row[colIdx]
+      })
+      return obj
+    })
 
     setImportProgress(60)
 
@@ -252,8 +273,12 @@ export default function Import() {
           description: `${count} contatos classificados com sucesso!`,
         })
       }
-    } catch {
-      toast({ title: 'Erro durante a importação.' })
+    } catch (err) {
+      setImportError(getErrorMessage(err))
+      toast({
+        title: 'Erro durante a importação',
+        description: getErrorMessage(err),
+      })
     } finally {
       setImporting(false)
     }
@@ -273,12 +298,33 @@ export default function Import() {
     link.click()
   }
 
-  const renderColumnSelect = (key: keyof typeof mapping, label: string, required?: boolean) => (
+  const addExtraField = () => {
+    const usedFields = extraFields.map((f) => f.field)
+    const available = AVAILABLE_EXTRA_FIELDS.find((f) => !usedFields.includes(f.value))
+    if (available) {
+      setExtraFields([...extraFields, { field: available.value, column: '' }])
+    } else {
+      toast({ title: 'Todos os campos adicionais já foram adicionados.' })
+    }
+  }
+
+  const updateExtraField = (index: number, key: keyof ExtraFieldMapping, value: string) => {
+    setExtraFields(extraFields.map((f, i) => (i === index ? { ...f, [key]: value } : f)))
+  }
+
+  const removeExtraField = (index: number) => {
+    setExtraFields(extraFields.filter((_, i) => i !== index))
+  }
+
+  const renderColumnSelect = (key: keyof DefaultMapping, label: string, required?: boolean) => (
     <div className="space-y-1">
       <Label className="text-xs font-semibold">
         {label} {required && '*'}
       </Label>
-      <Select value={mapping[key]} onValueChange={(val) => setMapping({ ...mapping, [key]: val })}>
+      <Select
+        value={defaultMapping[key]}
+        onValueChange={(val) => setDefaultMapping({ ...defaultMapping, [key]: val })}
+      >
         <SelectTrigger className="h-9 text-xs">
           <SelectValue placeholder="Selecione a coluna" />
         </SelectTrigger>
@@ -292,6 +338,11 @@ export default function Import() {
       </Select>
     </div>
   )
+
+  const getAvailableExtraOptions = (currentField: string) =>
+    AVAILABLE_EXTRA_FIELDS.filter(
+      (f) => f.value === currentField || !extraFields.some((ef) => ef.field === f.value),
+    )
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto pb-12">
@@ -396,21 +447,90 @@ export default function Import() {
                 2. Mapeamento de Colunas
               </CardTitle>
               <CardDescription className="text-xs">
-                Relacione as colunas da sua planilha com os campos do sistema (* campos
-                obrigatórios)
+                Campos padrão pré-preenchidos. Adicione campos adicionais conforme necessário (*
+                campos obrigatórios)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {renderColumnSelect('name', 'Nome Completo', true)}
-                {renderColumnSelect('email', 'E-mail', true)}
-                {renderColumnSelect('phone', 'Telefone')}
-                {renderColumnSelect('company', 'Empresa')}
-                {renderColumnSelect('raw_role', 'Cargo Original')}
-                {renderColumnSelect('rsvp', 'Status RSVP')}
-                <div className="sm:col-span-2">
-                  {renderColumnSelect('has_degree', 'Possui Diploma de Graduação?')}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Campos Padrão
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {renderColumnSelect('name', 'Nome Completo', true)}
+                  {renderColumnSelect('email', 'E-mail', true)}
+                  {renderColumnSelect('phone', 'Telefone')}
+                  {renderColumnSelect('company', 'Empresa')}
+                  {renderColumnSelect('cnpj', 'CNPJ')}
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Campos Adicionais
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addExtraField}
+                    className="text-xs gap-1 h-8"
+                    disabled={extraFields.length >= AVAILABLE_EXTRA_FIELDS.length}
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Adicionar campo</span>
+                  </Button>
+                </div>
+                {extraFields.length === 0 && (
+                  <p className="text-[11px] text-slate-400 italic">
+                    Nenhum campo adicional. Clique em "Adicionar campo" para mapear Cargo, RSVP,
+                    Diploma ou Observações.
+                  </p>
+                )}
+                {extraFields.map((extra, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Select
+                      value={extra.field}
+                      onValueChange={(val) => updateExtraField(idx, 'field', val)}
+                    >
+                      <SelectTrigger className="h-9 text-xs w-44 shrink-0">
+                        <SelectValue placeholder="Campo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableExtraOptions(extra.field).map((f) => (
+                          <SelectItem key={f.value} value={f.value} className="text-xs">
+                            {f.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={extra.column}
+                      onValueChange={(val) => updateExtraField(idx, 'column', val)}
+                    >
+                      <SelectTrigger className="h-9 text-xs flex-1">
+                        <SelectValue placeholder="Selecione a coluna" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {csvHeaders.map((h) => (
+                          <SelectItem key={h} value={h} className="text-xs">
+                            {h}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeExtraField(idx)}
+                      className="h-9 px-2 shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5 text-slate-400" />
+                    </Button>
+                  </div>
+                ))}
               </div>
 
               <div className="pt-4 border-t border-slate-100 space-y-2">
@@ -478,6 +598,16 @@ export default function Import() {
                 <p className="text-xs text-center text-slate-500">
                   Gravando participantes na base do mailing (lista)...
                 </p>
+              </div>
+            )}
+
+            {!importing && importError && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-rose-50 border border-rose-200">
+                <AlertCircle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-rose-800">Erro na importação</p>
+                  <p className="text-xs text-rose-700">{importError}</p>
+                </div>
               </div>
             )}
 
@@ -566,6 +696,7 @@ export default function Import() {
                       onClick={() => {
                         setStep(1)
                         setImportReport(null)
+                        setImportError('')
                         setClassifiedCount(0)
                       }}
                       className="text-xs"
@@ -601,14 +732,24 @@ export default function Import() {
               placeholder="Ex: Convenção Anual de RH 2026"
               value={newEventName}
               onChange={(e) => setNewEventName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateNewEvent()}
               className="text-xs h-9"
             />
+            {eventFieldErrors.name && (
+              <p className="text-xs text-rose-500">{eventFieldErrors.name}</p>
+            )}
+            {eventFieldErrors.owner && (
+              <p className="text-xs text-rose-500">{eventFieldErrors.owner}</p>
+            )}
           </div>
           <DialogFooter>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setNewEventOpen(false)}
+              onClick={() => {
+                setNewEventOpen(false)
+                setEventFieldErrors({})
+              }}
               className="text-xs"
             >
               Cancelar
@@ -618,7 +759,7 @@ export default function Import() {
               onClick={handleCreateNewEvent}
               className="bg-indigo-600 text-white text-xs"
             >
-              Criar Evento
+              Criar Mailing
             </Button>
           </DialogFooter>
         </DialogContent>

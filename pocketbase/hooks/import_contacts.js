@@ -64,6 +64,8 @@ routerAdd(
         rec.set('phone', (item.phone || '').trim())
         rec.set('company', (item.company || '').trim())
         rec.set('raw_role', (item.raw_role || '').trim())
+        rec.set('cnpj', (item.cnpj || '').trim())
+        rec.set('notes', (item.notes || '').trim())
 
         const rsvpInput = (item.rsvp || '').trim().toLowerCase()
         let rsvpVal = 'Aguardando'
