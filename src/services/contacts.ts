@@ -1,4 +1,5 @@
-import pb from '@/lib/pocketbase/client'
+import supabase from '@/lib/supabase/client'
+import { getCurrentUserId } from '@/lib/supabase/current-user'
 
 export type RoleCategory =
   | 'C-Level'
@@ -41,45 +42,122 @@ export interface ContactRecord {
   }
 }
 
-export const getContacts = async (
-  eventId?: string,
-  filterStr?: string,
-): Promise<ContactRecord[]> => {
-  let filter = eventId ? `event = "${eventId}"` : ''
-  if (filterStr) {
-    filter = filter ? `(${filter}) && ${filterStr}` : filterStr
+interface ContactRow {
+  id: string
+  event_id: string
+  name: string
+  email: string
+  phone: string | null
+  company: string | null
+  raw_role: string | null
+  rsvp: RSVPStatus | null
+  has_degree: 'Sim' | 'Não' | null
+  classification_status: ClassificationStatus | null
+  role_category: RoleCategory | null
+  priority: PriorityLevel | null
+  interests: string[] | null
+  demands: string[] | null
+  profile_summary: string | null
+  suggested_message: string | null
+  notes: string | null
+  last_classified_at: string | null
+  created_at: string
+  updated_at: string
+  event?: { name: string }[] | null
+}
+
+const SELECT = `id, event_id, name, email, phone, company, raw_role, rsvp, has_degree,
+  classification_status, role_category, priority, interests, demands, profile_summary,
+  suggested_message, notes, last_classified_at, created_at, updated_at`
+
+function mapRow(row: ContactRow): ContactRecord {
+  return {
+    id: row.id,
+    event: row.event_id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone ?? undefined,
+    company: row.company ?? undefined,
+    raw_role: row.raw_role ?? undefined,
+    rsvp: row.rsvp ?? undefined,
+    has_degree: row.has_degree ?? undefined,
+    classification_status: row.classification_status ?? undefined,
+    role_category: row.role_category ?? undefined,
+    priority: row.priority ?? undefined,
+    interests: row.interests ?? undefined,
+    demands: row.demands ?? undefined,
+    profile_summary: row.profile_summary ?? undefined,
+    suggested_message: row.suggested_message ?? undefined,
+    notes: row.notes ?? undefined,
+    last_classified_at: row.last_classified_at ?? undefined,
+    created: row.created_at,
+    updated: row.updated_at,
+    expand: row.event?.[0] ? { event: row.event[0] } : undefined,
   }
-  return pb.collection('mailing_contacts').getFullList<ContactRecord>({
-    filter,
-    sort: '-created',
-  })
+}
+
+function toPatch(data: Partial<ContactRecord>): Record<string, unknown> {
+  const { id: _id, event, created: _created, updated: _updated, expand: _expand, ...rest } = data
+  const patch: Record<string, unknown> = { ...rest }
+  if (event !== undefined) patch.event_id = event
+  return patch
+}
+
+export const getContacts = async (eventId?: string): Promise<ContactRecord[]> => {
+  let query = supabase.from('mailing_contacts').select(SELECT).order('created_at', { ascending: false })
+  if (eventId) query = query.eq('event_id', eventId)
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []).map(mapRow)
 }
 
 export const getContact = async (id: string): Promise<ContactRecord> => {
-  return pb.collection('mailing_contacts').getOne<ContactRecord>(id, { expand: 'event' })
+  const { data, error } = await supabase
+    .from('mailing_contacts')
+    .select(`${SELECT}, event:events(name)`)
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return mapRow(data)
 }
 
 export const createContact = async (data: Partial<ContactRecord>): Promise<ContactRecord> => {
-  return pb.collection('mailing_contacts').create<ContactRecord>(data)
+  const owner_id = await getCurrentUserId()
+  const { data: row, error } = await supabase
+    .from('mailing_contacts')
+    .insert({ ...toPatch(data), owner_id })
+    .select(SELECT)
+    .single()
+  if (error) throw error
+  return mapRow(row)
 }
 
 export const updateContact = async (
   id: string,
   data: Partial<ContactRecord>,
 ): Promise<ContactRecord> => {
-  return pb.collection('mailing_contacts').update<ContactRecord>(id, data)
+  const { data: row, error } = await supabase
+    .from('mailing_contacts')
+    .update(toPatch(data))
+    .eq('id', id)
+    .select(SELECT)
+    .single()
+  if (error) throw error
+  return mapRow(row)
 }
 
 export const deleteContact = async (id: string): Promise<boolean> => {
-  return pb.collection('mailing_contacts').delete(id)
+  const { error } = await supabase.from('mailing_contacts').delete().eq('id', id)
+  if (error) throw error
+  return true
 }
 
 export const classifyContact = async (id: string): Promise<ContactRecord> => {
-  return pb.send('/backend/v1/classify', {
-    method: 'POST',
-    body: JSON.stringify({ id }),
-    headers: { 'Content-Type': 'application/json' },
+  const { data, error } = await supabase.functions.invoke<ContactRow>('classify-contact', {
+    body: { id },
   })
+  if (error) throw error
+  return mapRow(data as ContactRow)
 }
 
 export interface ImportResult {
@@ -102,11 +180,11 @@ export const importContacts = async (
   }>,
   allowDuplicates: boolean = false,
 ): Promise<ImportResult> => {
-  return pb.send('/backend/v1/import-contacts', {
-    method: 'POST',
-    body: JSON.stringify({ event_id: eventId, contacts, allow_duplicates: allowDuplicates }),
-    headers: { 'Content-Type': 'application/json' },
+  const { data, error } = await supabase.functions.invoke<ImportResult>('import-contacts', {
+    body: { event_id: eventId, contacts, allow_duplicates: allowDuplicates },
   })
+  if (error) throw error
+  return data as ImportResult
 }
 
 export interface SearchHit {
@@ -123,9 +201,9 @@ export const searchContacts = async (
   query: string,
   eventId?: string,
 ): Promise<{ items: SearchHit[] }> => {
-  return pb.send('/backend/v1/contacts/search', {
-    method: 'POST',
-    body: JSON.stringify({ query, event_id: eventId, k: 5 }),
-    headers: { 'Content-Type': 'application/json' },
+  const { data, error } = await supabase.functions.invoke<{ items: SearchHit[] }>('search-contacts', {
+    body: { query, event_id: eventId, k: 25 },
   })
+  if (error) throw error
+  return data as { items: SearchHit[] }
 }

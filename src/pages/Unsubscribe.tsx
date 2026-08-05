@@ -5,11 +5,29 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import pb from '@/lib/pocketbase/client'
 
 interface UnsubscribeInfo {
   email: string
   name: string
+}
+
+const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
+
+// unsubscribe-get/unsubscribe-confirm sao publicas (--no-verify-jwt) e
+// identificam o log via query string (?log=), nao path param - ver
+// docs/migration-supabase.md secao 11.
+async function callUnsubscribeFunction(name: string, logId: string, init?: RequestInit) {
+  const url = `${FUNCTIONS_URL}/${name}?log=${encodeURIComponent(logId)}`
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      ...init?.headers,
+    },
+  })
+  if (!res.ok) throw new Error('Falha na requisição de descadastro.')
+  return res.json()
 }
 
 export default function Unsubscribe() {
@@ -23,7 +41,7 @@ export default function Unsubscribe() {
 
   useEffect(() => {
     if (!logId) return
-    pb.send(`/backend/v1/unsubscribe/${logId}`, { method: 'GET' })
+    callUnsubscribeFunction('unsubscribe-get', logId)
       .then((data: UnsubscribeInfo) => setInfo(data))
       .catch(() => setError('Link de descadastro inválido ou expirado.'))
       .finally(() => setLoading(false))
@@ -34,10 +52,9 @@ export default function Unsubscribe() {
     if (!logId) return
     setSubmitting(true)
     try {
-      await pb.send(`/backend/v1/unsubscribe/${logId}`, {
+      await callUnsubscribeFunction('unsubscribe-confirm', logId, {
         method: 'POST',
         body: JSON.stringify({ reason: reason.trim() || undefined }),
-        headers: { 'Content-Type': 'application/json' },
       })
       setDone(true)
     } catch {
