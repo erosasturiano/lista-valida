@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 export default function Index() {
   const { isAuthenticated, signIn, signUp, loading } = useAuth()
@@ -35,23 +36,14 @@ export default function Index() {
         else navigate('/dashboard')
       } else {
         const { error: err } = await signUp(email, password, name)
-        if (err)
-          setError(
-            'Erro ao criar conta. Certifique-se de que a senha tenha no mínimo 8 caracteres.',
-          )
+        if (err) setError(getErrorMessage(err))
         else navigate('/dashboard')
       }
-    } catch {
-      setError('Ocorreu um erro ao processar sua solicitação.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
-  }
-
-  const handleFillDemo = () => {
-    setEmail('erosasturiano@gmail.com')
-    setPassword('Skip@Pass')
-    setMode('signin')
   }
 
   return (
@@ -195,6 +187,7 @@ export default function Index() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-9 pr-9 text-sm"
+                      minLength={10}
                       required
                     />
                     <button
@@ -205,6 +198,11 @@ export default function Index() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  {mode === 'signup' && (
+                    <p className="text-xs text-slate-500">
+                      A senha deve ter no mínimo 10 caracteres.
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -220,19 +218,6 @@ export default function Index() {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </form>
-
-              {/* Demo Account quick fill */}
-              <div className="pt-3 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFillDemo}
-                  className="w-full text-xs text-indigo-700 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100"
-                >
-                  Usar conta de teste (erosasturiano@gmail.com)
-                </Button>
-              </div>
 
               <div className="text-center pt-2">
                 <button
