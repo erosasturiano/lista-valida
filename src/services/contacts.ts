@@ -82,6 +82,7 @@ export const classifyContact = async (id: string): Promise<ContactRecord> => {
 export interface ImportResult {
   imported: number
   skipped: number
+  blocked: number
   errors: Array<{ row: number; reason: string }>
   imported_ids?: string[]
 }

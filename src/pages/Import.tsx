@@ -46,8 +46,6 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 
-const TARGET_EVENT_NAME = 'Mailing DHO-7235a'
-
 const AVAILABLE_EXTRA_FIELDS = [
   { value: 'raw_role', label: 'Cargo Original' },
   { value: 'rsvp', label: 'Status RSVP' },
@@ -96,6 +94,7 @@ export default function Import() {
   const [importReport, setImportReport] = useState<{
     imported: number
     skipped: number
+    blocked: number
     errors: Array<{ row: number; reason: string }>
     imported_ids?: string[]
   } | null>(null)
@@ -105,24 +104,11 @@ export default function Import() {
   const [classifiedCount, setClassifiedCount] = useState(0)
   const [totalToClassify, setTotalToClassify] = useState(0)
 
-  const [eventEnsured, setEventEnsured] = useState(false)
-
   useEffect(() => {
-    if (eventEnsured || events.length === 0) return
-    const existing = events.find((e) => e.name === TARGET_EVENT_NAME)
-    if (existing) {
-      setTargetEventId(existing.id)
-      setEventEnsured(true)
-    } else {
-      createEvent({ name: TARGET_EVENT_NAME })
-        .then(async (created) => {
-          await refreshEvents()
-          setTargetEventId(created.id)
-          setEventEnsured(true)
-        })
-        .catch(() => setEventEnsured(true))
+    if (selectedEventId && !targetEventId) {
+      setTargetEventId(selectedEventId)
     }
-  }, [events, eventEnsured, refreshEvents])
+  }, [selectedEventId, targetEventId])
 
   const handleParsedData = (headers: string[], dataRows: string[][]) => {
     if (headers.length === 0 || dataRows.length === 0) {
@@ -192,9 +178,7 @@ export default function Import() {
       await refreshEvents()
       setTargetEventId(created.id)
       setSelectedEventId(created.id)
-      setEventEnsured(true)
-      setNewEventOpen(false)
-      setNewEventName('')
+      setNewEventOpen(false)      setNewEventName('')
       toast({ title: 'Mailing (lista) criado com sucesso!' })
     } catch (err) {
       const fieldErrs = extractFieldErrors(err)
@@ -613,20 +597,33 @@ export default function Import() {
 
             {!importing && importReport && (
               <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                   <div className="p-4 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-100">
                     <h4 className="text-2xl font-extrabold">{importReport.imported}</h4>
                     <p className="text-xs font-semibold">Importados</p>
                   </div>
                   <div className="p-4 rounded-lg bg-amber-50 text-amber-800 border border-amber-100">
                     <h4 className="text-2xl font-extrabold">{importReport.skipped}</h4>
-                    <p className="text-xs font-semibold">Duplicados Pulados</p>
+                    <p className="text-xs font-semibold">Duplicados</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-slate-100 text-slate-800 border border-slate-200">
+                    <h4 className="text-2xl font-extrabold">{importReport.blocked || 0}</h4>
+                    <p className="text-xs font-semibold">Bloqueados</p>
                   </div>
                   <div className="p-4 rounded-lg bg-rose-50 text-rose-800 border border-rose-100">
                     <h4 className="text-2xl font-extrabold">{importReport.errors.length}</h4>
                     <p className="text-xs font-semibold">Erros</p>
                   </div>
                 </div>
+
+                {importReport.blocked > 0 && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                    <AlertCircle className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
+                    <span className="text-xs text-slate-700">
+                      {importReport.blocked} contato(s) bloqueado(s) foram pulados — encontrados na lista de descadastro.
+                    </span>
+                  </div>
+                )}
 
                 {importReport.errors.length > 0 && (
                   <div className="space-y-3 border-t border-slate-100 pt-4">
