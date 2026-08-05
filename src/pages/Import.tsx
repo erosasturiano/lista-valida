@@ -178,7 +178,8 @@ export default function Import() {
       await refreshEvents()
       setTargetEventId(created.id)
       setSelectedEventId(created.id)
-      setNewEventOpen(false)      setNewEventName('')
+      setNewEventOpen(false)
+      setNewEventName('')
       toast({ title: 'Mailing (lista) criado com sucesso!' })
     } catch (err) {
       const fieldErrs = extractFieldErrors(err)
@@ -620,7 +621,8 @@ export default function Import() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
                     <AlertCircle className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
                     <span className="text-xs text-slate-700">
-                      {importReport.blocked} contato(s) bloqueado(s) foram pulados — encontrados na lista de descadastro.
+                      {importReport.blocked} contato(s) bloqueado(s) foram pulados — encontrados na
+                      lista de descadastro.
                     </span>
                   </div>
                 )}
