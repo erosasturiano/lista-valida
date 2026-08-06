@@ -3,97 +3,116 @@ routerAdd(
   '/backend/v1/import-contacts',
   (e) => {
     const body = e.requestInfo().body || {}
-    const eventId = body.event_id
-    const contacts = body.contacts
-    const allowDuplicates = !!body.allow_duplicates
+    const eventId = body.event_id || body.eventId || ''
+    const contacts = body.contacts || []
+    const allowDuplicates = body.allow_duplicates || body.allowDuplicates || false
+    const userId = e.auth?.id
 
-    if (!eventId) return e.badRequestError('ID do evento é obrigatório')
-    if (!Array.isArray(contacts) || contacts.length === 0) {
-      return e.badRequestError('Nenhum contato enviado para importação')
+    if (!userId) return e.unauthorizedError('Autenticação necessária')
+    if (!eventId) return e.badRequestError('event_id é obrigatório')
+
+    let eventRecord
+    try {
+      eventRecord = $app.findRecordById('events', eventId)
+    } catch (_) {
+      return e.badRequestError('Mailing (lista) não encontrado')
     }
 
-    const contactsCol = $app.findCollectionByNameOrId('mailing_contacts')
-    var auth = e.requestInfo().auth
-    var authId = auth ? auth.id : ''
+    if (eventRecord.getString('owner') !== userId && e.auth?.getString('role') !== 'admin') {
+      return e.forbiddenError('Acesso negado a este mailing')
+    }
+
+    const col = $app.findCollectionByNameOrId('mailing_contacts')
     let imported = 0
     let skipped = 0
+    let blocked = 0
     const errors = []
     const importedIds = []
-    const seenEmails = new Set()
+
+    const validRsvp = ['Aguardando', 'Confirmou', 'Recusou']
+    const validDegree = ['Sim', 'Não']
 
     for (let i = 0; i < contacts.length; i++) {
-      const item = contacts[i]
-      const rowNum = i + 1
-      const name = (item.name || '').trim()
-      const email = (item.email || '').trim().toLowerCase()
+      const c = contacts[i]
+      const rowNum = i + 2
 
-      if (!name) {
-        errors.push({ row: rowNum, reason: 'Nome do participante ausente' })
+      if (!c.name || !String(c.name).trim()) {
+        errors.push({ row: rowNum, reason: 'Nome é obrigatório' })
         continue
       }
-      if (!email || !email.includes('@')) {
-        errors.push({ row: rowNum, reason: 'Endereço de e-mail inválido ou ausente' })
+      if (!c.email || !String(c.email).trim()) {
+        errors.push({ row: rowNum, reason: 'E-mail é obrigatório' })
         continue
       }
 
-      if (seenEmails.has(email) && !allowDuplicates) {
-        skipped++
+      const emailStr = String(c.email).trim().toLowerCase()
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr)) {
+        errors.push({ row: rowNum, reason: 'E-mail inválido: ' + emailStr })
         continue
       }
-      seenEmails.add(email)
+
+      try {
+        $app.findFirstRecordByFilter('blocked_contacts', 'email = {:email} && owner = {:ownerId}', {
+          email: emailStr,
+          ownerId: userId,
+        })
+        blocked++
+        continue
+      } catch (_) {}
 
       if (!allowDuplicates) {
         try {
-          const existing = $app.findFirstRecordByFilter(
+          $app.findFirstRecordByFilter(
             'mailing_contacts',
-            'event = {:event} && email = {:email}',
-            { event: eventId, email: email },
+            'event = {:eventId} && email = {:email}',
+            { eventId: eventId, email: emailStr },
           )
-          if (existing) {
-            skipped++
-            continue
-          }
+          skipped++
+          continue
         } catch (_) {}
       }
 
       try {
-        const rec = new Record(contactsCol)
-        rec.set('event', eventId)
-        rec.set('name', name)
-        rec.set('email', email)
-        rec.set('phone', (item.phone || '').trim())
-        rec.set('company', (item.company || '').trim())
-        rec.set('raw_role', (item.raw_role || '').trim())
+        const record = new Record(col)
+        record.set('event', eventId)
+        record.set('name', String(c.name).trim())
+        record.set('email', emailStr)
+        if (c.phone) record.set('phone', String(c.phone).trim())
+        if (c.company) record.set('company', String(c.company).trim())
+        if (c.raw_role) record.set('raw_role', String(c.raw_role).trim())
+        if (c.cnpj) record.set('cnpj', String(c.cnpj).trim())
 
-        const rsvpInput = (item.rsvp || '').trim().toLowerCase()
-        let rsvpVal = 'Aguardando'
-        if (rsvpInput.includes('confirm')) rsvpVal = 'Confirmou'
-        else if (rsvpInput.includes('recus')) rsvpVal = 'Recusou'
-        rec.set('rsvp', rsvpVal)
+        const rsvpVal = c.rsvp && validRsvp.indexOf(c.rsvp) >= 0 ? c.rsvp : 'Aguardando'
+        record.set('rsvp', rsvpVal)
 
-        const degreeInput = (item.has_degree || '').trim().toLowerCase()
-        let degreeVal = degreeInput.startsWith('s')
-          ? 'Sim'
-          : degreeInput.startsWith('n')
-            ? 'Não'
-            : ''
-        if (degreeVal) rec.set('has_degree', degreeVal)
+        if (c.has_degree && validDegree.indexOf(c.has_degree) >= 0) {
+          record.set('has_degree', c.has_degree)
+        }
 
-        rec.set('classification_status', 'Pendente')
-        rec.set('priority', 'Média')
-        if (authId) rec.set('owner', authId)
+        if (c.notes) record.set('notes', String(c.notes).trim())
+        record.set('classification_status', 'Pendente')
+        record.set('owner', userId)
 
-        $app.save(rec)
-        importedIds.push(rec.id)
+        $app.save(record)
         imported++
+        importedIds.push(record.id)
       } catch (err) {
-        errors.push({ row: rowNum, reason: err.message || 'Erro ao salvar contato no banco' })
+        let reason = 'Erro ao salvar registro'
+        if (err && err.message) {
+          reason = String(err.message)
+        } else if (typeof err === 'string') {
+          reason = err
+        } else {
+          reason = String(err)
+        }
+        errors.push({ row: rowNum, reason: reason })
       }
     }
 
     return e.json(200, {
       imported: imported,
       skipped: skipped,
+      blocked: blocked,
       errors: errors,
       imported_ids: importedIds,
     })

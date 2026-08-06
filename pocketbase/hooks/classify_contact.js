@@ -1,123 +1,95 @@
 routerAdd(
   'POST',
-  '/backend/v1/classify',
+  '/backend/v1/classify-contact/{id}',
   (e) => {
-    const body = e.requestInfo().body || {}
-    const id = body.id
-    if (!id) return e.badRequestError('ID do contato é obrigatório')
+    const id = e.request.pathValue('id')
+    const userId = e.auth?.id
+    if (!userId) return e.unauthorizedError('Autenticação necessária')
 
-    const record = $app.findRecordById('mailing_contacts', id)
-    if (!record) return e.notFoundError('Contato não encontrado')
+    let record
+    try {
+      record = $app.findRecordById('mailing_contacts', id)
+    } catch (_) {
+      return e.notFoundError('Contato não encontrado')
+    }
 
-    var auth = e.requestInfo().auth
-    var authId = auth ? auth.id : ''
-    var authRole = auth ? auth.getString('role') : ''
-    var ownerId = record.getString('owner')
-    if (ownerId && authId && ownerId !== authId && authRole !== 'admin') {
-      return e.forbiddenError('Acesso negado a este contato')
+    if (record.getString('owner') !== userId && e.auth?.getString('role') !== 'admin') {
+      return e.forbiddenError('Acesso negado')
     }
 
     const name = record.getString('name')
+    const email = record.getString('email')
     const company = record.getString('company')
     const rawRole = record.getString('raw_role')
-    const rsvp = record.getString('rsvp')
-    const degree = record.getString('has_degree')
+    const cnpj = record.getString('cnpj')
 
-    const systemPrompt = `Você é um assistente especialista em higienização e classificação de mailings de eventos corporativos em português (Brasil).
-Análise os dados do participante e retorne um JSON com a classificação estruturada.
-Categorias válidas para role_category: ["C-Level", "Diretoria", "Gerência", "Coordenação", "Analista", "Assistente/Auxiliar", "Estagiário", "Consultor/Autônomo", "Outro"]
-Prioridades válidas para priority: ["Alta", "Média", "Baixa"]
+    const prompt =
+      'Analise o seguinte contato de mailing para evento e classifique-o:\n' +
+      'Nome: ' +
+      name +
+      '\nE-mail: ' +
+      email +
+      '\nEmpresa: ' +
+      company +
+      '\nCargo: ' +
+      rawRole +
+      '\nCNPJ: ' +
+      cnpj +
+      '\n\n' +
+      'Responda APENAS com JSON válido contendo:\n' +
+      '- role_category: uma de "C-Level","Diretoria","Gerência","Coordenação","Analista","Assistente/Auxiliar","Estagiário","Consultor/Autônomo","Outro"\n' +
+      '- priority: "Alta","Média" ou "Baixa"\n' +
+      '- interests: array de strings com interesses\n' +
+      '- demands: array de strings com demandas\n' +
+      '- profile_summary: resumo breve\n' +
+      '- suggested_message: mensagem personalizada de abordagem'
 
-Formato estrito do JSON:
-{
-  "role_category": "categoria válida",
-  "priority": "Alta | Média | Baixa",
-  "interests": ["interesse 1", "interesse 2"],
-  "demands": ["demanda 1", "demanda 2"],
-  "profile_summary": "resumo sucinto do perfil em 1-2 frases em português",
-  "suggested_message": "mensagem de abordagem personalizada e profissional em português para e-mail/WhatsApp referente ao evento"
-}`
-
-    const userPrompt = `Nome: ${name}
-Empresa: ${company}
-Cargo original: ${rawRole}
-RSVP: ${rsvp}
-Possui diploma de graduação: ${degree}`
-
-    let jsonResult = null
     try {
-      const aiRes = $ai.chat({
+      const reply = $ai.chat({
         model: 'fast',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
+          {
+            role: 'system',
+            content:
+              'Você é um assistente especializado em classificação de contatos para eventos. Responda apenas com JSON válido, sem texto adicional.',
+          },
+          { role: 'user', content: prompt },
         ],
       })
 
-      const content = aiRes.choices[0].message.content || ''
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        jsonResult = JSON.parse(jsonMatch[0])
+      const content = reply.choices[0].message.content
+      let parsed
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/)
+        parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content)
+      } catch (_) {
+        return e.json(500, { error: 'Falha ao processar classificação IA' })
       }
+
+      if (parsed.role_category) record.set('role_category', parsed.role_category)
+      if (parsed.priority) record.set('priority', parsed.priority)
+      if (parsed.interests) record.set('interests', parsed.interests)
+      if (parsed.demands) record.set('demands', parsed.demands)
+      if (parsed.profile_summary) record.set('profile_summary', parsed.profile_summary)
+      if (parsed.suggested_message) record.set('suggested_message', parsed.suggested_message)
+      record.set('classification_status', 'Classificado')
+      record.set('last_classified_at', new Date().toISOString().split('T')[0])
+
+      const embedText = [name, company, rawRole, parsed.profile_summary].filter(Boolean).join(' ')
+      if (embedText) {
+        try {
+          const embedRes = $ai.embed({ input: embedText })
+          record.set('search_embedding', embedRes.data[0].embedding)
+        } catch (embedErr) {
+          console.log('Embedding failed for contact ' + id, String(embedErr))
+        }
+      }
+
+      $app.save(record)
+      return e.json(200, record)
     } catch (err) {
-      $app.logger().error('Erro AI classificação', 'error', String(err))
+      return e.json(503, { error: 'Serviço de IA temporariamente indisponível' })
     }
-
-    if (!jsonResult) {
-      jsonResult = {
-        role_category: 'Outro',
-        priority: 'Média',
-        interests: ['Gestão de Pessoas', 'Desenvolvimento Organizacional'],
-        demands: ['Networking e Troca de Experiências'],
-        profile_summary: `Profissional atuando como ${rawRole} na empresa ${company}.`,
-        suggested_message: `Olá ${name}! Gostaríamos de convidá-lo(a) para participar das discussões no evento.`,
-      }
-    }
-
-    const validCategories = [
-      'C-Level',
-      'Diretoria',
-      'Gerência',
-      'Coordenação',
-      'Analista',
-      'Assistente/Auxiliar',
-      'Estagiário',
-      'Consultor/Autônomo',
-      'Outro',
-    ]
-    const validPriorities = ['Alta', 'Média', 'Baixa']
-
-    const roleCategory = validCategories.includes(jsonResult.role_category)
-      ? jsonResult.role_category
-      : 'Outro'
-    const priority = validPriorities.includes(jsonResult.priority) ? jsonResult.priority : 'Média'
-    const interests = Array.isArray(jsonResult.interests) ? jsonResult.interests : []
-    const demands = Array.isArray(jsonResult.demands) ? jsonResult.demands : []
-    const summary = jsonResult.profile_summary || ''
-    const suggestedMsg = jsonResult.suggested_message || ''
-
-    record.set('role_category', roleCategory)
-    record.set('priority', priority)
-    record.set('interests', interests)
-    record.set('demands', demands)
-    record.set('profile_summary', summary)
-    record.set('suggested_message', suggestedMsg)
-    record.set('classification_status', 'Classificado')
-    record.set('last_classified_at', new Date().toISOString())
-
-    const textToEmbed =
-      `${name} ${company} ${rawRole} ${roleCategory} ${interests.join(' ')} ${summary}`.trim()
-    try {
-      const embedRes = $ai.embed({ input: textToEmbed })
-      if (embedRes && embedRes.data && embedRes.data[0] && embedRes.data[0].embedding) {
-        record.set('search_embedding', embedRes.data[0].embedding)
-      }
-    } catch (embedErr) {
-      $app.logger().error('Erro embedding', 'error', String(embedErr))
-    }
-
-    $app.save(record)
-    return e.json(200, record)
   },
   $apis.requireAuth(),
 )

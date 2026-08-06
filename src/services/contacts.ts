@@ -11,7 +11,6 @@ export type RoleCategory =
   | 'Estagiário'
   | 'Consultor/Autônomo'
   | 'Outro'
-
 export type RSVPStatus = 'Aguardando' | 'Confirmou' | 'Recusou'
 export type ClassificationStatus = 'Pendente' | 'Classificado' | 'Revisado'
 export type PriorityLevel = 'Alta' | 'Média' | 'Baixa'
@@ -24,6 +23,7 @@ export interface ContactRecord {
   phone?: string
   company?: string
   raw_role?: string
+  cnpj?: string
   rsvp?: RSVPStatus
   has_degree?: 'Sim' | 'Não'
   classification_status?: ClassificationStatus
@@ -42,73 +42,18 @@ export interface ContactRecord {
   }
 }
 
-interface ContactRow {
-  id: string
-  event_id: string
-  name: string
-  email: string
-  phone: string | null
-  company: string | null
-  raw_role: string | null
-  rsvp: RSVPStatus | null
-  has_degree: 'Sim' | 'Não' | null
-  classification_status: ClassificationStatus | null
-  role_category: RoleCategory | null
-  priority: PriorityLevel | null
-  interests: string[] | null
-  demands: string[] | null
-  profile_summary: string | null
-  suggested_message: string | null
-  notes: string | null
-  last_classified_at: string | null
-  created_at: string
-  updated_at: string
-  event?: { name: string }[] | null
-}
-
-const SELECT = `id, event_id, name, email, phone, company, raw_role, rsvp, has_degree,
-  classification_status, role_category, priority, interests, demands, profile_summary,
-  suggested_message, notes, last_classified_at, created_at, updated_at`
-
-function mapRow(row: ContactRow): ContactRecord {
-  return {
-    id: row.id,
-    event: row.event_id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone ?? undefined,
-    company: row.company ?? undefined,
-    raw_role: row.raw_role ?? undefined,
-    rsvp: row.rsvp ?? undefined,
-    has_degree: row.has_degree ?? undefined,
-    classification_status: row.classification_status ?? undefined,
-    role_category: row.role_category ?? undefined,
-    priority: row.priority ?? undefined,
-    interests: row.interests ?? undefined,
-    demands: row.demands ?? undefined,
-    profile_summary: row.profile_summary ?? undefined,
-    suggested_message: row.suggested_message ?? undefined,
-    notes: row.notes ?? undefined,
-    last_classified_at: row.last_classified_at ?? undefined,
-    created: row.created_at,
-    updated: row.updated_at,
-    expand: row.event?.[0] ? { event: row.event[0] } : undefined,
-  }
-}
-
-function toPatch(data: Partial<ContactRecord>): Record<string, unknown> {
-  const { id: _id, event, created: _created, updated: _updated, expand: _expand, ...rest } = data
-  const patch: Record<string, unknown> = { ...rest }
-  if (event !== undefined) patch.event_id = event
-  return patch
-}
-
-export const getContacts = async (eventId?: string): Promise<ContactRecord[]> => {
-  let query = supabase.from('mailing_contacts').select(SELECT).order('created_at', { ascending: false })
-  if (eventId) query = query.eq('event_id', eventId)
-  const { data, error } = await query
-  if (error) throw error
-  return (data ?? []).map(mapRow)
+export const getContacts = async (
+  eventId?: string,
+  filterStr?: string,
+): Promise<ContactRecord[]> => {
+  const filters: string[] = []
+  if (eventId) filters.push(`event = "${eventId}"`)
+  if (filterStr) filters.push(filterStr)
+  return pb.collection('mailing_contacts').getFullList<ContactRecord>({
+    sort: '-created',
+    filter: filters.length > 0 ? filters.join(' && ') : undefined,
+    expand: 'event',
+  })
 }
 
 export const getContact = async (id: string): Promise<ContactRecord> => {
@@ -122,14 +67,8 @@ export const getContact = async (id: string): Promise<ContactRecord> => {
 }
 
 export const createContact = async (data: Partial<ContactRecord>): Promise<ContactRecord> => {
-  const owner_id = await getCurrentUserId()
-  const { data: row, error } = await supabase
-    .from('mailing_contacts')
-    .insert({ ...toPatch(data), owner_id })
-    .select(SELECT)
-    .single()
-  if (error) throw error
-  return mapRow(row)
+  const userId = pb.authStore.record?.id
+  return pb.collection('mailing_contacts').create<ContactRecord>({ ...data, owner: userId })
 }
 
 export const updateContact = async (
@@ -153,16 +92,13 @@ export const deleteContact = async (id: string): Promise<boolean> => {
 }
 
 export const classifyContact = async (id: string): Promise<ContactRecord> => {
-  const { data, error } = await supabase.functions.invoke<ContactRow>('classify-contact', {
-    body: { id },
-  })
-  if (error) throw error
-  return mapRow(data as ContactRow)
+  return pb.send(`/backend/v1/classify-contact/${id}`, { method: 'POST' })
 }
 
 export interface ImportResult {
   imported: number
   skipped: number
+  blocked: number
   errors: Array<{ row: number; reason: string }>
   imported_ids?: string[]
 }
@@ -175,10 +111,12 @@ export const importContacts = async (
     phone?: string
     company?: string
     raw_role?: string
+    cnpj?: string
     rsvp?: string
     has_degree?: string
+    notes?: string
   }>,
-  allowDuplicates: boolean = false,
+  allowDuplicates?: boolean,
 ): Promise<ImportResult> => {
   const { data, error } = await supabase.functions.invoke<ImportResult>('import-contacts', {
     body: { event_id: eventId, contacts, allow_duplicates: allowDuplicates },
@@ -201,8 +139,10 @@ export const searchContacts = async (
   query: string,
   eventId?: string,
 ): Promise<{ items: SearchHit[] }> => {
-  const { data, error } = await supabase.functions.invoke<{ items: SearchHit[] }>('search-contacts', {
-    body: { query, event_id: eventId, k: 25 },
+  return pb.send('/backend/v1/search-contacts', {
+    method: 'POST',
+    body: JSON.stringify({ query, event_id: eventId }),
+    headers: { 'Content-Type': 'application/json' },
   })
   if (error) throw error
   return data as { items: SearchHit[] }

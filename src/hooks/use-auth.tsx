@@ -55,14 +55,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const signUp = async (email: string, password: string, name?: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name: name || email.split('@')[0] } },
-    })
-    if (error) return { error }
-    await createLegacyPocketBaseUser(email, password, name)
-    return { error: null }
+    try {
+      await pb.collection('users').create({
+        email,
+        password,
+        passwordConfirm: password,
+        name: name || email.split('@')[0],
+        role: 'user',
+      })
+      await pb.collection('users').authWithPassword(email, password)
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
   }
 
   const signIn = async (email: string, password: string) => {

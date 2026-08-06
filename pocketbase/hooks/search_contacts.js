@@ -1,40 +1,29 @@
 routerAdd(
   'POST',
-  '/backend/v1/contacts/search',
+  '/backend/v1/search-contacts',
   (e) => {
     const body = e.requestInfo().body || {}
     const query = (body.query || '').trim()
-    const eventId = body.event_id
-    const k = body.k || 5
+    const eventId = body.event_id || body.eventId || ''
+    const userId = e.auth?.id
 
-    if (!query) return e.badRequestError('Termo de busca inteligente é obrigatório')
+    if (!userId) return e.unauthorizedError('Autenticação necessária')
+    if (!query) return e.badRequestError('query é obrigatório')
 
     try {
       const embedRes = $ai.embed({ input: query })
-      const queryVector = embedRes.data[0].embedding
-
-      var auth = e.requestInfo().auth
-      var authId = auth ? auth.id : ''
-      var authRole = auth ? auth.getString('role') : ''
-
-      let filterExpr = ''
-      if (authRole !== 'admin' && authId) {
-        filterExpr = `owner = "${authId}"`
-      }
-      if (eventId) {
-        filterExpr = filterExpr ? `${filterExpr} && event = "${eventId}"` : `event = "${eventId}"`
-      }
+      const filter = eventId ? 'event = "' + eventId + '"' : ''
 
       const results = $vectors.search(e, 'mailing_contacts', {
         field: 'search_embedding',
-        query: queryVector,
-        k: k,
-        filter: filterExpr,
+        query: embedRes.data[0].embedding,
+        k: 20,
+        filter: filter,
       })
 
       return e.json(200, results)
     } catch (err) {
-      return e.json(200, { items: [] })
+      return e.json(503, { error: 'Busqueda temporariamente indisponível' })
     }
   },
   $apis.requireAuth(),

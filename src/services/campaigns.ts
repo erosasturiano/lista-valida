@@ -48,14 +48,15 @@ export interface EmailLogRecord {
   recipient_name?: string
   subject?: string
   body?: string
-  status: 'enviando' | 'enviado' | 'falhou'
+  status?: 'enviado' | 'falhou'
   error_message?: string
   sent_at?: string
+  created: string
+  updated: string
   opened_at?: string
   clicked_at?: string
   click_count?: number
-  created: string
-  updated: string
+  expand?: { contact?: { name: string; email: string } }
 }
 
 interface CampaignRow {
@@ -156,29 +157,22 @@ function toPatch(data: Partial<CampaignRecord>): Record<string, unknown> {
 }
 
 export const getCampaigns = async (eventId?: string): Promise<CampaignRecord[]> => {
-  let query = supabase
-    .from('email_campaigns')
-    .select(`${CAMPAIGN_SELECT}, event:events(name)`)
-    .order('created_at', { ascending: false })
-  if (eventId) query = query.eq('event_id', eventId)
-  const { data, error } = await query
-  if (error) throw error
-  return (data ?? []).map(mapCampaign)
+  const filter = eventId ? `event = "${eventId}"` : undefined
+  return pb.collection('email_campaigns').getFullList<CampaignRecord>({
+    sort: '-created',
+    filter,
+    expand: 'event',
+  })
 }
 
-export const getReportCampaigns = async (
-  eventId?: string,
-  status?: string,
-): Promise<CampaignRecord[]> => {
-  let query = supabase
-    .from('email_campaigns')
-    .select(`${CAMPAIGN_SELECT}, event:events(name)`)
-    .order('created_at', { ascending: false })
-  if (eventId) query = query.eq('event_id', eventId)
-  if (status) query = query.eq('status', STATUS_PT_TO_DB[status as CampaignStatus])
-  const { data, error } = await query
-  if (error) throw error
-  return (data ?? []).map(mapCampaign)
+export const getReportCampaigns = async (eventId?: string): Promise<CampaignRecord[]> => {
+  const baseFilter = 'status != "rascunho"'
+  const filter = eventId ? `event = "${eventId}" && ${baseFilter}` : baseFilter
+  return pb.collection('email_campaigns').getFullList<CampaignRecord>({
+    sort: '-created',
+    filter,
+    expand: 'event',
+  })
 }
 
 export const getCampaign = async (id: string): Promise<CampaignRecord> => {
@@ -192,14 +186,12 @@ export const getCampaign = async (id: string): Promise<CampaignRecord> => {
 }
 
 export const createCampaign = async (data: Partial<CampaignRecord>): Promise<CampaignRecord> => {
-  const owner_id = await getCurrentUserId()
-  const { data: row, error } = await supabase
-    .from('email_campaigns')
-    .insert({ ...toPatch(data), owner_id })
-    .select(CAMPAIGN_SELECT)
-    .single()
-  if (error) throw error
-  return mapCampaign(row)
+  const userId = pb.authStore.record?.id
+  return pb.collection('email_campaigns').create<CampaignRecord>({
+    ...data,
+    owner: userId,
+    status: data.status || 'rascunho',
+  })
 }
 
 export const updateCampaign = async (
@@ -222,32 +214,23 @@ export const deleteCampaign = async (id: string): Promise<boolean> => {
   return true
 }
 
-// Assincrono desde a fase 3: so enfileira e volta em ms. sent/failed nao
-// sao mais conhecidos na hora - acompanhe via campaign.status/total_sent/
-// total_failed (Realtime) e a lista de logs, nao pelo retorno desta chamada.
-export interface QueueResult {
-  status: 'sending'
-  queued: number
-  ignored_blocked?: number
+export const sendCampaign = async (
+  id: string,
+): Promise<{ sent: number; failed: number; total: number }> => {
+  return pb.send(`/backend/v1/send-campaign/${id}`, { method: 'POST' })
 }
 
-export interface RequeueResult {
-  status: 'sending'
-  requeued: number
-  ignored_blocked?: number
+export const retryCampaignFailures = async (
+  id: string,
+): Promise<{ retried: number; stillFailed: number }> => {
+  return pb.send(`/backend/v1/retry-failures/${id}`, { method: 'POST' })
 }
 
-export const sendCampaign = async (id: string): Promise<QueueResult> => {
-  const { data, error } = await supabase.functions.invoke<QueueResult>('send-campaign', {
-    body: { id },
-  })
-  if (error) throw error
-  return data as QueueResult
-}
-
-export const retryCampaignFailures = async (id: string): Promise<RequeueResult> => {
-  const { data, error } = await supabase.functions.invoke<RequeueResult>('retry-campaign-failures', {
-    body: { id },
+export const getCampaignLogs = async (campaignId: string): Promise<EmailLogRecord[]> => {
+  return pb.collection('email_logs').getFullList<EmailLogRecord>({
+    filter: `campaign = "${campaignId}"`,
+    sort: '-created',
+    expand: 'contact',
   })
   if (error) throw error
   return data as RequeueResult

@@ -1,20 +1,16 @@
 routerAdd('GET', '/backend/v1/track-click/{logId}', (e) => {
   const logId = e.request.pathValue('logId')
-  if (!logId) return e.notFoundError('invalid log id')
+  const targetUrl = e.requestInfo().query['url'] || ''
 
-  var targetUrl = e.requestInfo().query['url'] || ''
-  if (!targetUrl) {
-    targetUrl = $secrets.get('SITE_URL') || '/'
-  }
+  if (!targetUrl) return e.badRequestError('parâmetro url é obrigatório')
 
   try {
-    const record = $app.findRecordById('email_logs', logId)
-    if (!record.getString('clicked_at')) {
-      record.set('clicked_at', new Date().toISOString())
+    const log = $app.findRecordById('email_logs', logId)
+    if (!log.getString('clicked_at')) {
+      log.set('clicked_at', new Date().toISOString())
     }
-    var currentCount = record.getInt('click_count') || 0
-    record.set('click_count', currentCount + 1)
-    $app.saveNoValidate(record)
+    log.set('click_count', (log.getInt('click_count') || 0) + 1)
+    $app.saveNoValidate(log)
   } catch (_) {}
 
   return e.redirect(302, targetUrl)

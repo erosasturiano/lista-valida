@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-02T17:40:42.244Z",
+  "generatedAt": "2026-08-05T16:57:48.991Z",
   "collections": [
     {
       "name": "users",
@@ -276,6 +276,12 @@
           "required": true,
           "system": false,
           "collectionRef": "users"
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

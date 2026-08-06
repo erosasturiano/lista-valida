@@ -1,251 +1,127 @@
 routerAdd(
   'POST',
-  '/backend/v1/campaigns/{id}/send',
+  '/backend/v1/send-campaign/{id}',
   (e) => {
-    const campaignId = e.request.pathValue('id')
-    if (!campaignId) return e.badRequestError('ID da campanha é obrigatório')
+    const id = e.request.pathValue('id')
+    const userId = e.auth?.id
+    if (!userId) return e.unauthorizedError('Autenticação necessária')
 
     let campaign
     try {
-      campaign = $app.findRecordById('email_campaigns', campaignId)
+      campaign = $app.findRecordById('email_campaigns', id)
     } catch (_) {
       return e.notFoundError('Campanha não encontrada')
     }
 
-    if (campaign.getString('status') === 'enviando') {
-      return e.badRequestError('Campanha já está em processo de envio')
-    }
-
-    var apiKey = $secrets.get('RESEND_API_KEY') || ''
-    if (!apiKey) {
-      return e.badRequestError(
-        'RESEND_API_KEY não configurada. Acesse Configurações de Domínio para instruções de como obter e configurar a chave do Resend.',
-      )
-    }
-
-    var senderName = campaign.getString('sender_name') || ''
-    var senderEmail = campaign.getString('sender_email') || ''
-    if (!senderEmail) {
-      return e.badRequestError(
-        'Remetente (sender_email) não configurado na campanha. Edite a campanha e defina um e-mail remetente com domínio verificado no Resend (ex: contato@seudominio.com.br). Acesse Configurações de Domínio para verificar o domínio.',
-      )
-    }
-
-    var fromField = senderName ? senderName + ' <' + senderEmail + '>' : senderEmail
-
-    const eventId = campaign.getString('event')
-    var owner = campaign.getString('owner')
-    const subjectTemplate = campaign.getString('subject')
-    const bodyTemplate = campaign.getString('body_template')
-    const filterRsvp = campaign.getString('filter_rsvp')
-    const filterPriority = campaign.getString('filter_priority')
-    const filterCategory = campaign.getString('filter_category')
-
-    const filterStr = 'event = "' + eventId + '" && owner = "' + owner + '"'
-    let contacts = []
-    try {
-      contacts = $app.findRecordsByFilter('mailing_contacts', filterStr, '-created', 500, 0)
-    } catch (_) {}
-
-    const filteredContacts = contacts.filter(function (c) {
-      if (filterRsvp && filterRsvp !== 'todos' && c.getString('rsvp') !== filterRsvp) return false
-      if (
-        filterPriority &&
-        filterPriority !== 'todas' &&
-        c.getString('priority') !== filterPriority
-      )
-        return false
-      if (
-        filterCategory &&
-        filterCategory !== 'todas' &&
-        c.getString('role_category') !== filterCategory
-      )
-        return false
-      return true
-    })
-
-    const logsCol = $app.findCollectionByNameOrId('email_logs')
-
-    var baseUrl = $secrets.get('PB_INSTANCE_URL') || ''
-    if (!baseUrl) {
-      var proto = e.request.header.get('X-Forwarded-Proto') || 'https'
-      baseUrl = proto + '://' + e.request.host
-    }
-    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
-
-    var blockedEmails = {}
-    try {
-      var blockedRecords = $app.findRecordsByFilter(
-        'blocked_contacts',
-        'owner = "' + owner + '"',
-        '-created',
-        500,
-        0,
-      )
-      for (var b = 0; b < blockedRecords.length; b++) {
-        blockedEmails[blockedRecords[b].getString('email').toLowerCase()] = true
-      }
-    } catch (_) {}
-
-    var ignoredBlocked = 0
-    var sendableContacts = filteredContacts.filter(function (c) {
-      var email = c.getString('email').toLowerCase()
-      if (blockedEmails[email]) {
-        ignoredBlocked++
-        return false
-      }
-      return true
-    })
-
-    if (sendableContacts.length === 0) {
-      return e.json(200, { sent: 0, failed: 0, total: 0, ignored_blocked: ignoredBlocked })
+    if (campaign.getString('owner') !== userId && e.auth?.getString('role') !== 'admin') {
+      return e.forbiddenError('Acesso negado')
     }
 
     campaign.set('status', 'enviando')
     $app.save(campaign)
 
-    let sent = 0
-    let failed = 0
+    const eventId = campaign.getString('event')
+    const filters = ['event = "' + eventId + '"']
+    const frsvp = campaign.getString('filter_rsvp')
+    if (frsvp && frsvp !== 'todos') filters.push('rsvp = "' + frsvp + '"')
+    const fpri = campaign.getString('filter_priority')
+    if (fpri && fpri !== 'todas') filters.push('priority = "' + fpri + '"')
+    const fcat = campaign.getString('filter_category')
+    if (fcat && fcat !== 'todas') filters.push('role_category = "' + fcat + '"')
 
-    for (let i = 0; i < sendableContacts.length; i++) {
-      const contact = sendableContacts[i]
-      const name = contact.getString('name')
-      const email = contact.getString('email')
-      const company = contact.getString('company') || ''
-      const role = contact.getString('raw_role') || ''
-      const suggestedMsg = contact.getString('suggested_message') || ''
+    let contacts = []
+    try {
+      contacts = $app.findRecordsByFilter(
+        'mailing_contacts',
+        filters.join(' && '),
+        '-created',
+        0,
+        0,
+      )
+    } catch (_) {}
 
-      if (!email) {
-        failed++
-        continue
-      }
+    const blocked = new Set()
+    try {
+      const bl = $app.findRecordsByFilter('blocked_contacts', 'owner = "' + userId + '"', '', 0, 0)
+      for (const b of bl) blocked.add(b.getString('email').toLowerCase())
+    } catch (_) {}
 
-      const subject = subjectTemplate
-        .replace(/\{nome\}/g, name)
-        .replace(/\{empresa\}/g, company)
-        .replace(/\{cargo\}/g, role)
+    const logCol = $app.findCollectionByNameOrId('email_logs')
+    const pbUrl = $secrets.get('PB_INSTANCE_URL') || ''
+    const siteUrl = $secrets.get('SITE_URL') || ''
+    const apiKey = $secrets.get('RESEND_API_KEY') || ''
+    const senderName =
+      campaign.getString('sender_name') || e.auth.getString('sender_name') || 'Lista Válida'
+    const senderEmail =
+      campaign.getString('sender_email') ||
+      e.auth.getString('sender_email') ||
+      'noreply@listavalida.com.br'
+    const subject = campaign.getString('subject')
+    const template = campaign.getString('body_template')
+    let sent = 0,
+      failed = 0
 
-      const body = bodyTemplate
-        .replace(/\{nome\}/g, name)
-        .replace(/\{empresa\}/g, company)
-        .replace(/\{cargo\}/g, role)
-        .replace(/\{mensagem_ia\}/g, suggestedMsg)
+    for (const c of contacts) {
+      const email = c.getString('email')
+      if (blocked.has(email.toLowerCase())) continue
+      const name = c.getString('name')
+      const company = c.getString('company')
+      let body = template
+        .replace(/\{\{nome\}\}/g, name)
+        .replace(/\{\{email\}\}/g, email)
+        .replace(/\{\{empresa\}\}/g, company)
 
-      var htmlBody = body.replace(/\n/g, '<br>\n')
-
-      var log = new Record(logsCol)
-      log.set('campaign', campaignId)
-      log.set('contact', contact.id)
+      const log = new Record(logCol)
+      log.set('campaign', id)
+      log.set('contact', c.id)
       log.set('recipient_email', email)
       log.set('recipient_name', name)
       log.set('subject', subject)
-      log.set('click_count', 0)
-      log.set('owner', owner)
+      log.set('body', body)
+      log.set('status', 'enviado')
+      log.set('owner', userId)
       $app.save(log)
 
-      var trackClickBase = baseUrl + '/backend/v1/track-click/' + log.id + '?url='
-      var trackedBody = htmlBody.replace(
-        /href=["'](https?:\/\/[^"']+)["']/gi,
-        function (match, url) {
-          return 'href="' + trackClickBase + encodeURIComponent(url) + '"'
-        },
-      )
-      var pixelUrl = baseUrl + '/backend/v1/track-open/' + log.id
-      trackedBody +=
-        '<img src="' + pixelUrl + '" width="1" height="1" alt="" style="display:none;" />'
-
-      var siteUrl = $secrets.get('SITE_URL') || ''
-      if (!siteUrl) {
-        siteUrl = baseUrl
-      }
-      if (siteUrl.endsWith('/')) {
-        siteUrl = siteUrl.slice(0, -1)
-      }
-      var unsubUrl = siteUrl + '/descadastrar/' + log.id
-      trackedBody = trackedBody.replace(/\{link_descadastro\}/g, unsubUrl)
-      if (trackedBody.indexOf('Cancelamento de recebimento') === -1) {
-        trackedBody += '<hr><p style="font-size:12px;color:#666;margin-top:20px;padding-top:10px;">'
-        trackedBody += '<strong>Cancelamento de recebimento de e-mails</strong><br>'
-        trackedBody +=
-          'Você está recebendo este e-mail porque se cadastrou ou participou de um evento nosso. Caso não deseje mais receber nossas comunicações, você pode cancelar o recebimento a qualquer momento, de forma simples e gratuita.'
-        trackedBody += '</p>'
-        trackedBody +=
-          '<p style="margin-top:10px;"><a href="' +
-          unsubUrl +
-          '" style="color:#4f46e5;font-weight:bold;">Cancelar meu recebimento</a></p>'
-      }
+      const trackedBody =
+        body +
+        '<img src="' +
+        pbUrl +
+        '/backend/v1/track-open/' +
+        log.id +
+        '" width="1" height="1" style="display:none"/>' +
+        '<p style="margin-top:20px;font-size:11px;color:#999;"><a href="' +
+        siteUrl +
+        '/descadastrar/' +
+        log.id +
+        '">Descadastrar</a></p>'
 
       try {
-        var res = $http.send({
+        const res = $http.send({
           url: 'https://api.resend.com/emails',
           method: 'POST',
-          headers: {
-            Authorization: 'Bearer ' + apiKey,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiKey },
           body: JSON.stringify({
-            from: fromField,
-            to: [email],
+            from: senderName + ' <' + senderEmail + '>',
+            to: email,
             subject: subject,
             html: trackedBody,
           }),
           timeout: 30,
         })
-
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          log.set('body', trackedBody)
-          log.set('status', 'enviado')
           log.set('sent_at', new Date().toISOString())
-          $app.save(log)
           sent++
         } else {
-          var errMsg = 'Resend API error (HTTP ' + res.statusCode + ')'
-          try {
-            if (res.json) {
-              if (res.json.message) {
-                errMsg = String(res.json.message)
-              } else if (res.json.error) {
-                errMsg = String(res.json.error)
-              }
-            }
-          } catch (_) {}
-          var lowerErrMsg = errMsg.toLowerCase()
-          if (
-            res.statusCode === 401 ||
-            res.statusCode === 403 ||
-            lowerErrMsg.indexOf('api key') !== -1 ||
-            lowerErrMsg.indexOf('unauthorized') !== -1 ||
-            lowerErrMsg.indexOf('authentication') !== -1
-          ) {
-            errMsg +=
-              ' — A chave RESEND_API_KEY está ausente ou inválida. Acesse Configurações de Domínio para verificar.'
-          } else if (
-            lowerErrMsg.indexOf('verify') !== -1 ||
-            lowerErrMsg.indexOf('domain') !== -1 ||
-            lowerErrMsg.indexOf('dominio') !== -1 ||
-            lowerErrMsg.indexOf('sender') !== -1 ||
-            lowerErrMsg.indexOf('not allowed') !== -1
-          ) {
-            errMsg +=
-              ' — O remetente (sender_email) ou domínio não está verificado no Resend. Acesse Configurações de Domínio para instruções.'
-          } else if (res.statusCode === 429) {
-            errMsg +=
-              ' — Limite de envio atingido (rate limit). Aguarde alguns minutos e tente novamente.'
-          }
-          log.set('body', trackedBody)
           log.set('status', 'falhou')
-          log.set('error_message', errMsg)
-          $app.save(log)
+          log.set('error_message', 'HTTP ' + res.statusCode)
           failed++
         }
-      } catch (sendErr) {
-        var transportErr = 'Erro de conexão com Resend: ' + String(sendErr.message || sendErr)
-        log.set('body', trackedBody)
+      } catch (err) {
         log.set('status', 'falhou')
-        log.set('error_message', transportErr)
-        $app.save(log)
+        log.set('error_message', String(err.message || err))
         failed++
       }
+      $app.save(log)
     }
 
     campaign.set('status', failed > 0 ? 'parcialmente_falhou' : 'enviado')
@@ -253,32 +129,7 @@ routerAdd(
     campaign.set('total_failed', failed)
     $app.save(campaign)
 
-    var resultSummary = { sent: sent, failed: failed, total: sendableContacts.length }
-    if (ignoredBlocked > 0) {
-      resultSummary.ignored_blocked = ignoredBlocked
-    }
-    if (failed > 0 && sent === 0) {
-      var firstError = ''
-      for (var j = 0; j < filteredContacts.length; j++) {
-        try {
-          var errLog = $app.findRecordsByFilter(
-            'email_logs',
-            'campaign = "' + campaignId + '" && status = "falhou"',
-            '-created',
-            1,
-            0,
-          )
-          if (errLog.length > 0) {
-            firstError = errLog[0].getString('error_message') || ''
-            break
-          }
-        } catch (_) {}
-      }
-      if (firstError) {
-        resultSummary.first_error = firstError
-      }
-    }
-    return e.json(200, resultSummary)
+    return e.json(200, { sent: sent, failed: failed, total: sent + failed })
   },
   $apis.requireAuth(),
 )

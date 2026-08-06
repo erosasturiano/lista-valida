@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import Contacts from './pages/Contacts'
 import ContactDetail from './pages/ContactDetail'
 import Import from './pages/Import'
+import Events from './pages/Events'
 import Campaigns from './pages/Campaigns'
 import CampaignDetail from './pages/CampaignDetail'
 import Templates from './pages/Templates'
@@ -16,6 +17,7 @@ import ReportDeliveries from './pages/ReportDeliveries'
 import DomainSettings from './pages/DomainSettings'
 import BlockedContacts from './pages/BlockedContacts'
 import Unsubscribe from './pages/Unsubscribe'
+import ForgotPassword from './pages/ForgotPassword'
 import Users from './pages/Users'
 import AccountSettings from './pages/AccountSettings'
 import NotFound from './pages/NotFound'
@@ -32,6 +34,7 @@ const App = () => (
         <Sonner />
         <Routes>
           <Route path="/descadastrar/:logId" element={<Unsubscribe />} />
+          <Route path="/esqueci-senha" element={<ForgotPassword />} />
           <Route path="/" element={<Index />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -44,6 +47,7 @@ const App = () => (
             <Route path="/relatorio-entregas" element={<ReportDeliveries />} />
             <Route path="/configuracoes" element={<DomainSettings />} />
             <Route path="/bloqueados" element={<BlockedContacts />} />
+            <Route path="/eventos" element={<Events />} />
             <Route path="/conta" element={<AccountSettings />} />
             <Route path="/usuarios" element={<Users />} />
           </Route>
