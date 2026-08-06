@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { Sparkles, CheckCircle, Eye, EyeOff, Lock, Mail, User, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -134,7 +134,6 @@ export default function Index() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div className="space-y-1.5">
@@ -218,8 +217,15 @@ export default function Index() {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </form>
-
-              <div className="text-center pt-2">
+              <div className="space-y-3 pt-2 text-center">
+                {mode === 'signin' && (
+                  <Link
+                    to="/esqueci-senha"
+                    className="block text-xs text-slate-500 hover:text-indigo-600 font-medium transition-colors"
+                  >
+                    Esqueci minha senha
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -232,7 +238,7 @@ export default function Index() {
                     ? 'Não tem uma conta? Cadastre-se'
                     : 'Já possui conta? Faça login'}
                 </button>
-              </div>
+              </div>{' '}
             </CardContent>
           </Card>
         </div>

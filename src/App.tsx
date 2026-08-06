@@ -17,6 +17,7 @@ import ReportDeliveries from './pages/ReportDeliveries'
 import DomainSettings from './pages/DomainSettings'
 import BlockedContacts from './pages/BlockedContacts'
 import Unsubscribe from './pages/Unsubscribe'
+import ForgotPassword from './pages/ForgotPassword'
 import Users from './pages/Users'
 import AccountSettings from './pages/AccountSettings'
 import NotFound from './pages/NotFound'
@@ -33,6 +34,7 @@ const App = () => (
         <Sonner />
         <Routes>
           <Route path="/descadastrar/:logId" element={<Unsubscribe />} />
+          <Route path="/esqueci-senha" element={<ForgotPassword />} />
           <Route path="/" element={<Index />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
