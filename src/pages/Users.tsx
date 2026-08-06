@@ -70,7 +70,7 @@ export default function Users() {
     loadData()
   }, [isAdmin, navigate, loadData])
 
-  useRealtime('users', () => loadData(), isAdmin)
+  useRealtime('profiles', () => loadData(), isAdmin)
 
   const filteredUsers = useMemo(() => {
     if (!search) return users

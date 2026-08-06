@@ -1,4 +1,5 @@
-import pb from '@/lib/pocketbase/client'
+import supabase from '@/lib/supabase/client'
+import { getCurrentUserId } from '@/lib/supabase/current-user'
 
 export type RoleCategory =
   | 'C-Level'
@@ -56,7 +57,13 @@ export const getContacts = async (
 }
 
 export const getContact = async (id: string): Promise<ContactRecord> => {
-  return pb.collection('mailing_contacts').getOne<ContactRecord>(id, { expand: 'event' })
+  const { data, error } = await supabase
+    .from('mailing_contacts')
+    .select(`${SELECT}, event:events(name)`)
+    .eq('id', id)
+    .single()
+  if (error) throw error
+  return mapRow(data)
 }
 
 export const createContact = async (data: Partial<ContactRecord>): Promise<ContactRecord> => {
@@ -68,11 +75,20 @@ export const updateContact = async (
   id: string,
   data: Partial<ContactRecord>,
 ): Promise<ContactRecord> => {
-  return pb.collection('mailing_contacts').update<ContactRecord>(id, data)
+  const { data: row, error } = await supabase
+    .from('mailing_contacts')
+    .update(toPatch(data))
+    .eq('id', id)
+    .select(SELECT)
+    .single()
+  if (error) throw error
+  return mapRow(row)
 }
 
 export const deleteContact = async (id: string): Promise<boolean> => {
-  return pb.collection('mailing_contacts').delete(id)
+  const { error } = await supabase.from('mailing_contacts').delete().eq('id', id)
+  if (error) throw error
+  return true
 }
 
 export const classifyContact = async (id: string): Promise<ContactRecord> => {
@@ -102,11 +118,11 @@ export const importContacts = async (
   }>,
   allowDuplicates?: boolean,
 ): Promise<ImportResult> => {
-  return pb.send('/backend/v1/import-contacts', {
-    method: 'POST',
-    body: JSON.stringify({ event_id: eventId, contacts, allow_duplicates: allowDuplicates }),
-    headers: { 'Content-Type': 'application/json' },
+  const { data, error } = await supabase.functions.invoke<ImportResult>('import-contacts', {
+    body: { event_id: eventId, contacts, allow_duplicates: allowDuplicates },
   })
+  if (error) throw error
+  return data as ImportResult
 }
 
 export interface SearchHit {
@@ -128,4 +144,6 @@ export const searchContacts = async (
     body: JSON.stringify({ query, event_id: eventId }),
     headers: { 'Content-Type': 'application/json' },
   })
+  if (error) throw error
+  return data as { items: SearchHit[] }
 }
