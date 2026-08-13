@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import supabase from '@/lib/supabase/client'
-import pb from '@/lib/pocketbase/client'
 
 export interface AuthUser {
   id: string
@@ -55,31 +54,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const signUp = async (email: string, password: string, name?: string) => {
-    try {
-      await pb.collection('users').create({
-        email,
-        password,
-        passwordConfirm: password,
-        name: name || email.split('@')[0],
-        role: 'user',
-      })
-      await pb.collection('users').authWithPassword(email, password)
-      return { error: null }
-    } catch (error) {
-      return { error }
-    }
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name: name || email.split('@')[0] } },
+    })
+    if (error) return { error }
+    return { error: null }
   }
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error }
-    await syncLegacyPocketBaseSession(email, password)
     return { error: null }
   }
 
   const signOut = async () => {
     await supabase.auth.signOut()
-    pb.authStore.clear()
   }
 
   const updateProfile = async (data: { sender_name?: string; sender_email?: string }) => {
@@ -140,38 +131,7 @@ function buildAuthUser(
   }
 }
 
-// Shim transitorio (estrategia Strangler Fig): enquanto nem todo service
-// do frontend migrou para o Supabase (fase 5), as telas que ainda falam
-// com o PocketBase precisam de uma sessao propria valida ali, em
-// paralelo a sessao Supabase. Best-effort: se falhar (ex.: usuario que so
-// existe de um lado ainda), a sessao Supabase segue valendo normalmente -
-// so as telas ainda nao migradas param de funcionar para esse usuario
-// especifico ate a fase 5/6 fecharem. Remover isto (e a dependencia de
-// pocketbase) faz parte da fase 7 (limpeza final).
-async function syncLegacyPocketBaseSession(email: string, password: string) {
-  try {
-    await pb.collection('users').authWithPassword(email, password)
-  } catch {
-    pb.authStore.clear()
-  }
-}
-
-async function createLegacyPocketBaseUser(email: string, password: string, name?: string) {
-  try {
-    await pb.collection('users').create({
-      email,
-      password,
-      passwordConfirm: password,
-      name: name || email.split('@')[0],
-      // O hook set_owner.js deveria forcar isto no servidor (nunca confiar
-      // no client para o role real), mas a validacao de campo obrigatorio
-      // roda antes do hook aplicar nessa instancia - mandar 'user' aqui so
-      // desbloqueia a validacao, nao contorna a seguranca: o hook, quando
-      // roda, sobrescreve para 'user' de qualquer forma para quem nao e admin.
-      role: 'user',
-    })
-    await pb.collection('users').authWithPassword(email, password)
-  } catch {
-    pb.authStore.clear()
-  }
-}
+// O shim de sessao paralela no PocketBase (fases 4/5) foi removido: nenhum
+// service do frontend usa mais o PocketBase para dados, entao manter a
+// sessao dupla so gerava erro 400 ("value must be unique") a cada cadastro
+// com e-mail ja existente no PocketBase.

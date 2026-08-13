@@ -125,9 +125,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      pocketbase:
-        specifier: ~0.26.9
-        version: 0.26.9
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -198,6 +195,9 @@ importers:
       oxlint:
         specifier: ^1.71.0
         version: 1.71.0
+      pocketbase:
+        specifier: ^0.27.1
+        version: 0.27.1
       postcss:
         specifier: ^8.5.15
         version: 8.5.15
@@ -1959,8 +1959,8 @@ packages:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
 
-  pocketbase@0.26.9:
-    resolution: {integrity: sha512-Tiv1/hNuUzRdvT0d8hF03dfzuefQ1WdSRp1A1q3wzFC/WYhQcbU/Qlaubl/3ZDo6xvFXBS8JAgBS/L+ms7nkVQ==}
+  pocketbase@0.27.1:
+    resolution: {integrity: sha512-5WXhgCZzkm34eLbsuKv5jlGace4NIu43jk8CHxXn2dlSflrLkso/M8eNwoq6J4INVeZ6fP3nIbO+wm9PI5kGnA==}
 
   postcss-import@15.1.0:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
@@ -3823,7 +3823,7 @@ snapshots:
 
   pirates@4.0.7: {}
 
-  pocketbase@0.26.9: {}
+  pocketbase@0.27.1: {}
 
   postcss-import@15.1.0(postcss@8.5.15):
     dependencies:

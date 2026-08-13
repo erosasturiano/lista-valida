@@ -7,7 +7,7 @@ import {
   type TemplateRecord,
   type TemplateCategory,
 } from '@/services/templates'
-import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { extractFieldErrors, type FieldErrors } from '@/lib/errors'
 import {
   Dialog,
   DialogContent,

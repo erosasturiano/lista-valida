@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
-import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { getErrorMessage } from '@/lib/errors'
 
 export interface FailureDiagnostic {
   totalErrors: number

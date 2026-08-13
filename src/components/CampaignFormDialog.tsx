@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Mail, FileText } from 'lucide-react'
 import { createCampaign } from '@/services/campaigns'
 import { getTemplates, TEMPLATE_CATEGORIES, type TemplateRecord } from '@/services/templates'
-import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { extractFieldErrors, type FieldErrors } from '@/lib/errors'
 import {
   Dialog,
   DialogContent,

@@ -5,6 +5,7 @@
 // acontece no drain do pg_cron (fase 3, send-email). Responde em ms.
 
 import { getUser } from '../_shared/auth.ts'
+import { corsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 
 interface SendBody {
   id: string
@@ -13,6 +14,9 @@ interface SendBody {
 type Supabase = Awaited<ReturnType<typeof getUser>>['supabase']
 
 Deno.serve(async (req: Request) => {
+  const preflight = handleCorsPreflight(req)
+  if (preflight) return preflight
+
   try {
     const { supabase } = await getUser(req)
     const { id } = (await req.json()) as SendBody
@@ -50,6 +54,6 @@ async function validateCampaign(supabase: Supabase, campaignId: string): Promise
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
   })
 }
