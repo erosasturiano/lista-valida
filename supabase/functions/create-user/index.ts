@@ -6,6 +6,7 @@
 
 import { getUser, isAdmin } from '../_shared/auth.ts'
 import { createServiceClient } from '../_shared/service-client.ts'
+import { corsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 
 interface CreateUserBody {
   name: string
@@ -15,9 +16,14 @@ interface CreateUserBody {
 }
 
 Deno.serve(async (req: Request) => {
+  const preflight = handleCorsPreflight(req)
+  if (preflight) return preflight
+
   try {
-    const { user } = await getUser(req)
-    if (!isAdmin(user)) return jsonResponse({ error: 'acesso negado' }, 403)
+    const { supabase, user } = await getUser(req)
+    if (!(await isAdmin(supabase, user.id))) {
+      return jsonResponse({ error: 'acesso negado' }, 403)
+    }
 
     const body = (await req.json()) as CreateUserBody
     const validationError = validateBody(body)
@@ -54,6 +60,6 @@ function validateBody(body: CreateUserBody): string | null {
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
   })
 }

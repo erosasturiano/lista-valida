@@ -5,6 +5,7 @@
 // comum so os proprios contatos — sem filtro extra de owner_id aqui.
 
 import { getUser } from '../_shared/auth.ts'
+import { corsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 
 interface SearchBody {
   query: string
@@ -15,8 +16,19 @@ interface SearchBody {
 const MAX_RESULTS = 25
 
 Deno.serve(async (req: Request) => {
+  const preflight = handleCorsPreflight(req)
+  if (preflight) return preflight
+
+  // Autenticacao fora do try da busca: uma sessao expirada precisa virar
+  // 401, nunca ser confundida com "nenhum resultado".
+  let supabase: Awaited<ReturnType<typeof getUser>>['supabase']
   try {
-    const { supabase } = await getUser(req)
+    supabase = (await getUser(req)).supabase
+  } catch {
+    return jsonResponse({ error: 'não autorizado' }, 401)
+  }
+
+  try {
     const body = (await req.json()) as SearchBody
     const query = (body.query || '').trim()
     if (!query) return jsonResponse({ error: 'Termo de busca é obrigatório' }, 400)
@@ -34,22 +46,25 @@ Deno.serve(async (req: Request) => {
     if (error) throw error
 
     return jsonResponse({ items: data ?? [] })
-  } catch (_error) {
-    return jsonResponse({ items: [] })
+  } catch (error) {
+    // Falha de banco nao pode virar lista vazia silenciosa - a tela
+    // mostraria "nenhum resultado" para o que na verdade e um erro.
+    return jsonResponse({ error: (error as Error).message }, 500)
   }
 })
 
-// Escapa caracteres com significado especial no valor do filtro
-// PostgREST (`,` e `()` delimitam a expressao do .or(), `%`/`_` sao
-// coringas do ILIKE) antes de envolver em coringas de busca parcial.
+// No PostgREST, valores dentro de or=(...) que contenham caracteres
+// reservados (virgula, parenteses, ponto) precisam ser envolvidos em
+// aspas duplas - escapar com barra invertida nao e o mecanismo correto e
+// produz um filtro malformado. Dentro das aspas, " e \ sao escapados.
 function toIlikePattern(value: string): string {
-  const escaped = value.replace(/[%_,()]/g, (char) => '\\' + char)
-  return `%${escaped}%`
+  const escaped = value.replace(/["\\]/g, (char) => '\\' + char)
+  return `"%${escaped}%"`
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
   })
 }

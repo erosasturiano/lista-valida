@@ -52,11 +52,14 @@ export const createEvent = async (data: {
   event_date?: string
   description?: string
 }): Promise<EventRecord> => {
-  const userId = pb.authStore.record?.id
-  return pb.collection('events').create<EventRecord>({
-    ...data,
-    owner: userId,
-  })
+  const owner_id = await getCurrentUserId()
+  const { data: row, error } = await supabase
+    .from('events')
+    .insert({ ...data, owner_id })
+    .select(SELECT)
+    .single()
+  if (error) throw error
+  return mapRow(row)
 }
 
 export const updateEvent = async (id: string, data: Partial<EventRecord>): Promise<EventRecord> => {

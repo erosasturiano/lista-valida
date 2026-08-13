@@ -358,3 +358,133 @@ e `MIGRATE_DRY_RUN=true` (mostra o que faria sem escrever nada).
 não devem passar por aqui, e a versão com envio de e-mail real não é algo pra eu disparar sem você
 decidir o momento. Rodar com `MIGRATE_DRY_RUN=true` primeiro é o caminho recomendado antes da
 migração de verdade.
+
+## 16. Bug de CORS descoberto ao testar o envio em massa (2026-08-06)
+
+Nenhuma Edge Function tinha tratamento de CORS (cabeçalho `Access-Control-Allow-Origin` no
+preflight `OPTIONS`). Toda chamada feita pelo navegador (`supabase.functions.invoke` ou `fetch`
+direto) era bloqueada pelo próprio navegador antes de chegar no Supabase — nunca apareceu como
+erro do lado do Supabase, só no console do navegador, por isso passou despercebido até testar
+`send-bulk-email` de verdade. Corrigido com `supabase/functions/_shared/cors.ts`
+(`corsHeaders` + `handleCorsPreflight`) aplicado nas 9 functions chamadas direto do frontend:
+`classify-contact`, `import-contacts`, `search-contacts`, `send-campaign`,
+`retry-campaign-failures`, `create-user`, `send-bulk-email`, `unsubscribe-get`,
+`unsubscribe-confirm`. As demais (`track-click`, `track-open`, `resend-webhook`, `send-email`,
+`custom-access-token-hook`, `unsubscribe`, `interesse` do projeto MBA) não precisam — são
+acessadas por navegação direta de link ou chamada servidor-a-servidor, nunca por `fetch`/XHR do
+SPA, que é o que o CORS restringe.
+
+**Todas as 9 precisam de redeploy** para o fix ter efeito.
+
+### Correção do diagnóstico: o CORS sozinho não resolvia (2026-08-13)
+
+O `handleCorsPreflight` dentro da function **nunca chega a rodar** nas functions publicadas com
+verificação de JWT no gateway. Medido diretamente:
+
+```
+import-contacts   -> OPTIONS 401   (verify_jwt ligado)
+send-bulk-email   -> OPTIONS 401   (verify_jwt ligado)
+unsubscribe-get   -> OPTIONS 204   (--no-verify-jwt)
+track-click       -> OPTIONS 204   (--no-verify-jwt)
+```
+
+O gateway do Supabase rejeita o preflight `OPTIONS` com 401 antes de invocar a function — e o
+navegador **sempre** manda preflight quando há header `Authorization` (que é o caso de todo
+`supabase.functions.invoke`). Resultado: importar contatos, buscar, classificar, disparar campanha
+e criar usuário estavam **todos quebrados pelo navegador**, mesmo com o código correto.
+
+**A correção é publicar as 7 functions autenticadas também com `--no-verify-jwt`**, deixando a
+autenticação inteiramente a cargo de `_shared/auth.ts`:
+
+```
+supabase functions deploy classify-contact --no-verify-jwt
+supabase functions deploy import-contacts --no-verify-jwt
+supabase functions deploy search-contacts --no-verify-jwt
+supabase functions deploy send-campaign --no-verify-jwt
+supabase functions deploy retry-campaign-failures --no-verify-jwt
+supabase functions deploy send-bulk-email --no-verify-jwt
+supabase functions deploy create-user --no-verify-jwt
+```
+
+Isso **não enfraquece a autenticação**: `getUser()` valida o JWT contra o servidor de auth a cada
+chamada e lança `unauthorized` se o header faltar ou o token for inválido — a checagem do gateway
+era redundante com ela. `create-user` continua exigindo admin por cima disso (`isAdmin`, agora
+consultando `profiles`). Sem sessão válida, a resposta é 401 igual a antes.
+
+Isso substitui a instrução anterior deste documento, que mandava manter `verify_jwt` nessas sete.
+
+## 17. Fase 7 — remoção do PocketBase e do builder da Skip (2026-08-06)
+
+Executada a pedido do usuário, depois que o `use-auth.tsx` foi revertido pela terceira vez pelo
+trabalho paralelo (o `signUp` voltou a ser 100% PocketBase e quebrou o cadastro com
+`400 value must be unique`).
+
+**PocketBase removido:**
+- `pocketbase/` (13 hooks + 11 migrations) — a fonte de verdade do backend antigo. Continua no
+  histórico do git; a **instância viva** em `goskip.dev` não é afetada por nada disso.
+- `src/lib/pocketbase/` (`client.ts`, `errors.ts`, `schema.json`)
+- `src/hooks/use-auth.tsx` — `signUp` restaurado para `supabase.auth.signUp`, e o shim de sessão
+  dupla (`syncLegacyPocketBaseSession` / `createLegacyPocketBaseUser`) removido: nenhum service
+  usa mais PocketBase para dados desde a fase 5, então o shim só gerava 400 a cada cadastro/login.
+- `VITE_POCKETBASE_URL` do `.env`
+- Dependência `pocketbase`: **movida para `devDependencies`, não removida** —
+  `scripts/migrate-to-supabase.js` ainda a importa e a migração de dados real ainda não rodou.
+  Pode sair de vez depois que a migração for concluída.
+
+**`src/lib/errors.ts`** (novo) substitui `src/lib/pocketbase/errors.ts`, mantendo a mesma API
+(`extractFieldErrors`, `getErrorMessage`, `FieldErrors`) usada por 8 telas. Diferença de
+capacidade, não de contrato: o PocketBase devolvia um mapa de erros por campo pronto; o Supabase
+não tem equivalente, então `extractFieldErrors` virou best-effort — só identifica o campo em
+violação de unicidade (23505) ou not-null (23502), quando o nome da coluna aparece na mensagem do
+Postgres. Nos demais casos devolve `{}` e a tela cai no toast com `getErrorMessage`, que já era o
+caminho principal em todas elas.
+
+**Builder da Skip removido:**
+- `index.html` — `<script src="https://goskip.dev/skip.js">` (era ele que injetava o badge
+  "Criado com o Skip" e a chamada a `api.goskip.dev/v1/projects/config/public` que aparecia
+  bloqueada por CORS no console em todo teste) e o `<meta name="author" content="Skip">`
+- `.skip.config.json` — manifesto do builder (`preventAI`, `excludeFromContext`, refs de deploy)
+- `vite-plugin-react-uid.js` + seu uso em `vite.config.ts` — instrumentação que injetava
+  `data-uid="arquivo:linha:coluna"` e `data-prohibitions` em cada elemento para o editor visual
+- `src/lib/skipAi.ts` — helpers de SSE para os bindings `$ai.chat`/`$ai.agent` da Skip; grep
+  confirmou zero importadores
+
+**Validado**: `tsc --noEmit` limpo, `pnpm build` passa (3316 módulos), e o smoke test no navegador
+(login + 7 telas + criação de evento) rodou com **zero erros de console** — antes sempre havia o
+ruído de CORS do `goskip.dev`.
+
+**Atenção — a migração de dados ainda não rodou de verdade.** A instância do PocketBase em
+`goskip.dev` continua sendo a única cópia dos dados de produção (6.495 contatos, 8 usuários, etc.).
+Não desligar o projeto na Skip antes de rodar `scripts/migrate-to-supabase.js` sem
+`MIGRATE_DRY_RUN`. Também vale confirmar onde o frontend passa a ser hospedado: sem
+`.skip.config.json` o deploy pela Skip deixa de funcionar.
+
+## 15. Reconciliação com trabalho paralelo no PocketBase (2026-08-05)
+
+Depois da fase 6, `contacts.ts`, `campaigns.ts`, `events.ts`, `CampaignDetail.tsx`, `Import.tsx` e
+`Unsubscribe.tsx` apareceram com uma mistura de código Supabase (o que eu tinha escrito) e código
+PocketBase antigo (`pb.collection`/`pb.send`), com variáveis indefinidas e uma função duplicada —
+build quebrado. Misturado com a reversão vieram **funcionalidades novas que nunca fizeram parte
+desta migração**, sinal de trabalho em paralelo do lado do PocketBase enquanto a migração estava
+em andamento:
+
+- Campo `cnpj` em `mailing_contacts` (tabela e formulário de importação)
+- Campo `notes` por contato na importação (já cobria isso via `extraFields` dinâmico do
+  `Import.tsx`, sem mudança de schema)
+- Contagem de `blocked` no resultado da importação — contatos cujo e-mail já está em
+  `blocked_contacts` do mesmo owner agora são pulados na importação (bucket separado de
+  `skipped`, que é só duplicata)
+- `Unsubscribe.tsx` ganhou um design mais simples (confirmação em um clique, sem mostrar o
+  e-mail antes) — mantido a pedido do usuário, mas religado à Edge Function `unsubscribe-confirm`
+  real (a versão que apareceu chamava uma rota do PocketBase que não existe mais)
+
+Resolvido restaurando a implementação Supabase de cada função e **incorporando** os campos novos
+(não descartando): `supabase/migrations/0008_add_cnpj.sql` adiciona a coluna;
+`supabase/functions/import-contacts/index.ts` grava `cnpj`/`notes` e checa `blocked_contacts`
+antes de importar. `unsubscribe-get` (Edge Function) ficou sem consumidor no frontend depois dessa
+decisão — continua implementada e correta, só não é mais chamada por nenhuma tela.
+
+**Risco em aberto**: parece haver desenvolvimento ativo nesses mesmos arquivos do lado do
+PocketBase/repositório original enquanto esta migração roda em paralelo no fork. Vale conferir com
+quem estiver mexendo no `erosasturiano/lista-valida` antes de futuras mudanças nesses arquivos,
+para não repetir esta reconciliação.

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Ban } from 'lucide-react'
 import { createBlockedContact } from '@/services/blocked-contacts'
 import { type EventRecord } from '@/services/events'
-import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { extractFieldErrors, type FieldErrors } from '@/lib/errors'
 import {
   Dialog,
   DialogContent,

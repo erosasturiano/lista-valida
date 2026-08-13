@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Mail, User } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { extractFieldErrors, type FieldErrors } from '@/lib/errors'
 
 export default function AccountSettings() {
   const { user, updateProfile } = useAuth()

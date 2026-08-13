@@ -29,12 +29,12 @@
 import PocketBase from 'pocketbase'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
+import { pathToFileURL } from 'node:url'
 
-const PB_URL = requireEnv('PB_URL')
-const PB_ADMIN_EMAIL = requireEnv('PB_ADMIN_EMAIL')
-const PB_ADMIN_PASSWORD = requireEnv('PB_ADMIN_PASSWORD')
-const SUPABASE_URL = requireEnv('SUPABASE_URL')
-const SUPABASE_SERVICE_ROLE_KEY = requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+// Lidas sob demanda (dentro de main), nao no topo do modulo: assim
+// importar este arquivo - num teste, por exemplo - nao encerra o processo
+// por variavel ausente nem exige credenciais reais.
 const SITE_URL = process.env.SITE_URL || 'http://localhost:8080'
 const DRY_RUN = process.env.MIGRATE_DRY_RUN === 'true'
 
@@ -59,6 +59,33 @@ function deterministicUuid(oldId) {
 function randomPassword() {
   return crypto.randomBytes(24).toString('base64')
 }
+
+// O campo "email" de registros de auth que nao sao o proprio autenticado
+// vem oculto na API do PocketBase (emailVisibility do registro, separado
+// de listRule/role) - so um superusuario real (_superusers) contorna
+// isso, e nao tinhamos um disponivel. O mapeamento manual (id -> email),
+// tirado do painel Admin do PocketBase, e PII de usuarios reais: fica num
+// arquivo local fora do versionamento (ver scripts/known-emails.example.json),
+// nunca literal aqui.
+const KNOWN_EMAILS_PATH = new URL('./known-emails.local.json', import.meta.url)
+const KNOWN_EMAILS = loadKnownEmails()
+
+function loadKnownEmails() {
+  if (!fs.existsSync(KNOWN_EMAILS_PATH)) return {}
+  try {
+    return JSON.parse(fs.readFileSync(KNOWN_EMAILS_PATH, 'utf8'))
+  } catch (error) {
+    console.error(`known-emails.local.json invalido: ${error.message}`)
+    process.exit(1)
+  }
+}
+
+// Contas que nao devem virar usuarios permanentes no Supabase (ex.: a
+// criada so pra destravar a autenticacao deste script). Lista de ids
+// separada por virgula em MIGRATE_EXCLUDED_IDS.
+const EXCLUDED_USER_IDS = new Set(
+  (process.env.MIGRATE_EXCLUDED_IDS || '').split(',').map((id) => id.trim()).filter(Boolean),
+)
 
 const CAMPAIGN_STATUS_PT_TO_DB = {
   rascunho: 'draft',
@@ -89,15 +116,22 @@ async function migrateUsers(pb, supabase) {
   let emailed = 0
 
   for (const u of pbUsers) {
+    if (EXCLUDED_USER_IDS.has(u.id)) continue
+
     const id = deterministicUuid(u.id)
+    const email = u.email || KNOWN_EMAILS[u.id]
     const { data: existing } = await supabase.auth.admin.getUserById(id)
 
     if (existing?.user) {
       skipped++
       continue
     }
+    if (!email) {
+      console.error(`[users] pulando ${u.id}: e-mail nao disponivel (nem via API, nem no KNOWN_EMAILS)`)
+      continue
+    }
 
-    console.log(`[users] criando ${u.email} (role=${u.role || 'user'})`)
+    console.log(`[users] criando ${email} (role=${u.role || 'user'})`)
     if (DRY_RUN) {
       created++
       continue
@@ -105,10 +139,10 @@ async function migrateUsers(pb, supabase) {
 
     const { data: createdUser, error } = await supabase.auth.admin.createUser({
       id,
-      email: u.email,
+      email,
       password: randomPassword(),
       email_confirm: true,
-      user_metadata: { name: u.name || u.email.split('@')[0] },
+      user_metadata: { name: u.name || email.split('@')[0] },
     })
     if (error) {
       console.error(`  falhou: ${error.message}`)
@@ -127,7 +161,7 @@ async function migrateUsers(pb, supabase) {
       })
       .eq('id', createdUser.user.id)
 
-    await supabase.auth.resetPasswordForEmail(u.email, {
+    await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${SITE_URL}/redefinir-senha`,
     })
     emailed++
@@ -279,27 +313,73 @@ async function migrateBlockedContacts(pb, supabase) {
   console.log(`[blocked_contacts] migrados: ${count} de ${records.length}`)
 }
 
+// PB_ADMIN_EMAIL/PASSWORD podem ser de um superusuario do proprio
+// PocketBase (colecao especial "_superusers", acesso total, ignora
+// qualquer regra de API) ou de um usuario comum do app com role=admin
+// (colecao "users" - a regra ownerOrAdmin ja da acesso a tudo pra esse
+// caso). Tenta superuser primeiro (mais comum quando o e-mail nao e o de
+// um cadastro normal do app), cai pra "users" se falhar.
+async function authenticateAsAdmin(pb, email, password) {
+  try {
+    await pb.collection('_superusers').authWithPassword(email, password)
+    console.log('autenticado como superusuario do PocketBase (_superusers)')
+  } catch {
+    await pb.collection('users').authWithPassword(email, password)
+    console.log('autenticado como usuario admin do app (users)')
+  }
+}
+
 async function main() {
   console.log(DRY_RUN ? '=== DRY RUN (nada sera escrito) ===' : '=== MIGRACAO REAL ===')
 
-  const pb = new PocketBase(PB_URL)
-  await pb.collection('users').authWithPassword(PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD)
+  const pb = new PocketBase(requireEnv('PB_URL'))
+  await authenticateAsAdmin(pb, requireEnv('PB_ADMIN_EMAIL'), requireEnv('PB_ADMIN_PASSWORD'))
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const supabase = createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'))
 
-  // Ordem importa: cada etapa referencia ids gerados pela anterior.
-  await migrateUsers(pb, supabase)
-  await migrateEvents(pb, supabase)
-  await migrateTemplates(pb, supabase)
-  await migrateContacts(pb, supabase)
-  await migrateCampaigns(pb, supabase)
-  await migrateLogs(pb, supabase)
-  await migrateBlockedContacts(pb, supabase)
+  // Ordem importa: cada etapa referencia ids gerados pela anterior, entao
+  // uma falha interrompe o restante de proposito - migrar campanhas sem os
+  // contatos correspondentes deixaria referencias quebradas. O que muda em
+  // relacao a versao anterior e o diagnostico: em vez de estourar uma
+  // excecao crua, informamos exatamente em que etapa parou e o que ja foi
+  // gravado (as etapas anteriores sao idempotentes, entao basta corrigir a
+  // causa e rodar de novo).
+  const etapas = [
+    ['users', migrateUsers],
+    ['events', migrateEvents],
+    ['email_templates', migrateTemplates],
+    ['mailing_contacts', migrateContacts],
+    ['email_campaigns', migrateCampaigns],
+    ['email_logs', migrateLogs],
+    ['blocked_contacts', migrateBlockedContacts],
+  ]
+
+  for (const [nome, etapa] of etapas) {
+    try {
+      await etapa(pb, supabase)
+    } catch (error) {
+      console.error(`\n=== INTERROMPIDO na etapa "${nome}" ===`)
+      console.error(error.message)
+      console.error(
+        'As etapas anteriores ja foram gravadas e sao idempotentes: corrija a causa e rode de novo.',
+      )
+      process.exit(1)
+    }
+  }
 
   console.log('=== concluido ===')
 }
 
-main().catch((err) => {
-  console.error('Migracao falhou:', err)
-  process.exit(1)
-})
+// So executa quando chamado direto pela CLI. Sem esta guarda, qualquer
+// import do modulo (um teste, por exemplo) dispararia a migracao real.
+const isDirectRun =
+  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error('Migracao falhou:', err)
+    process.exit(1)
+  })
+}
+
+export { deterministicUuid, loadKnownEmails }

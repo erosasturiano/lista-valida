@@ -6,12 +6,16 @@
 // tabela).
 
 import { getUser } from '../_shared/auth.ts'
+import { corsHeaders, handleCorsPreflight } from '../_shared/cors.ts'
 
 interface RetryBody {
   id: string
 }
 
 Deno.serve(async (req: Request) => {
+  const preflight = handleCorsPreflight(req)
+  if (preflight) return preflight
+
   try {
     const { supabase } = await getUser(req)
     const { id } = (await req.json()) as RetryBody
@@ -29,6 +33,6 @@ Deno.serve(async (req: Request) => {
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
   })
 }

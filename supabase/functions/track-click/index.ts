@@ -12,7 +12,7 @@ const fallbackUrl = Deno.env.get('SITE_URL') || '/'
 Deno.serve(async (req: Request) => {
   const params = new URL(req.url).searchParams
   const logId = params.get('log')
-  const targetUrl = params.get('url') || fallbackUrl
+  const targetUrl = safeRedirectTarget(params.get('url'))
 
   if (logId) {
     const supabase = createClient(supabaseUrl, serviceRoleKey)
@@ -21,6 +21,22 @@ Deno.serve(async (req: Request) => {
 
   return new Response(null, { status: 302, headers: { Location: targetUrl } })
 })
+
+// O destino vem da query string, entao redirecionar sem validar tornaria
+// esta function um open redirect: *.supabase.co costuma estar em
+// allowlist de gateway de e-mail, e o link passaria por filtros que
+// bloqueariam o dominio de phishing final. Aceita apenas http(s) - o que
+// barra javascript:, data: e afins.
+function safeRedirectTarget(raw: string | null): string {
+  if (!raw) return fallbackUrl
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return fallbackUrl
+    return url.toString()
+  } catch {
+    return fallbackUrl
+  }
+}
 
 async function registerClick(supabase: SupabaseClient, logId: string) {
   const { data: log } = await supabase

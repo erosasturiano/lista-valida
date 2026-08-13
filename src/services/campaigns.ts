@@ -5,13 +5,13 @@ export type CampaignStatus = 'rascunho' | 'enviando' | 'enviado' | 'parcialmente
 
 type DbCampaignStatus = 'draft' | 'sending' | 'sent' | 'partially_failed'
 
-const STATUS_DB_TO_PT: Record<DbCampaignStatus, CampaignStatus> = {
+export const STATUS_DB_TO_PT: Record<DbCampaignStatus, CampaignStatus> = {
   draft: 'rascunho',
   sending: 'enviando',
   sent: 'enviado',
   partially_failed: 'parcialmente_falhou',
 }
-const STATUS_PT_TO_DB: Record<CampaignStatus, DbCampaignStatus> = {
+export const STATUS_PT_TO_DB: Record<CampaignStatus, DbCampaignStatus> = {
   rascunho: 'draft',
   enviando: 'sending',
   enviado: 'sent',
@@ -48,15 +48,14 @@ export interface EmailLogRecord {
   recipient_name?: string
   subject?: string
   body?: string
-  status?: 'enviado' | 'falhou'
+  status: 'enviando' | 'enviado' | 'falhou'
   error_message?: string
   sent_at?: string
-  created: string
-  updated: string
   opened_at?: string
   clicked_at?: string
   click_count?: number
-  expand?: { contact?: { name: string; email: string } }
+  created: string
+  updated: string
 }
 
 interface CampaignRow {
@@ -99,13 +98,13 @@ interface EmailLogRow {
 const CAMPAIGN_SELECT = `id, name, event_id, subject, body, sender_name, sender_email, status,
   filter_rsvp, filter_priority, filter_category, total_sent, total_failed, created_at, updated_at`
 
-const LOG_STATUS_DB_TO_PT: Record<EmailLogRow['status'], EmailLogRecord['status']> = {
+export const LOG_STATUS_DB_TO_PT: Record<EmailLogRow['status'], EmailLogRecord['status']> = {
   queued: 'enviando',
   sent: 'enviado',
   failed: 'falhou',
 }
 
-function mapCampaign(row: CampaignRow): CampaignRecord {
+export function mapCampaign(row: CampaignRow): CampaignRecord {
   return {
     id: row.id,
     name: row.name,
@@ -126,7 +125,7 @@ function mapCampaign(row: CampaignRow): CampaignRecord {
   }
 }
 
-function mapLog(row: EmailLogRow): EmailLogRecord {
+export function mapLog(row: EmailLogRow): EmailLogRecord {
   return {
     id: row.id,
     campaign: row.campaign_id,
@@ -146,7 +145,7 @@ function mapLog(row: EmailLogRow): EmailLogRecord {
   }
 }
 
-function toPatch(data: Partial<CampaignRecord>): Record<string, unknown> {
+export function toPatch(data: Partial<CampaignRecord>): Record<string, unknown> {
   const { id: _id, event, body_template, status, created: _created, updated: _updated, expand: _expand, ...rest } =
     data
   const patch: Record<string, unknown> = { ...rest }
@@ -157,22 +156,29 @@ function toPatch(data: Partial<CampaignRecord>): Record<string, unknown> {
 }
 
 export const getCampaigns = async (eventId?: string): Promise<CampaignRecord[]> => {
-  const filter = eventId ? `event = "${eventId}"` : undefined
-  return pb.collection('email_campaigns').getFullList<CampaignRecord>({
-    sort: '-created',
-    filter,
-    expand: 'event',
-  })
+  let query = supabase
+    .from('email_campaigns')
+    .select(`${CAMPAIGN_SELECT}, event:events(name)`)
+    .order('created_at', { ascending: false })
+  if (eventId) query = query.eq('event_id', eventId)
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []).map(mapCampaign)
 }
 
-export const getReportCampaigns = async (eventId?: string): Promise<CampaignRecord[]> => {
-  const baseFilter = 'status != "rascunho"'
-  const filter = eventId ? `event = "${eventId}" && ${baseFilter}` : baseFilter
-  return pb.collection('email_campaigns').getFullList<CampaignRecord>({
-    sort: '-created',
-    filter,
-    expand: 'event',
-  })
+export const getReportCampaigns = async (
+  eventId?: string,
+  status?: string,
+): Promise<CampaignRecord[]> => {
+  let query = supabase
+    .from('email_campaigns')
+    .select(`${CAMPAIGN_SELECT}, event:events(name)`)
+    .order('created_at', { ascending: false })
+  if (eventId) query = query.eq('event_id', eventId)
+  if (status) query = query.eq('status', STATUS_PT_TO_DB[status as CampaignStatus])
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []).map(mapCampaign)
 }
 
 export const getCampaign = async (id: string): Promise<CampaignRecord> => {
@@ -186,12 +192,14 @@ export const getCampaign = async (id: string): Promise<CampaignRecord> => {
 }
 
 export const createCampaign = async (data: Partial<CampaignRecord>): Promise<CampaignRecord> => {
-  const userId = pb.authStore.record?.id
-  return pb.collection('email_campaigns').create<CampaignRecord>({
-    ...data,
-    owner: userId,
-    status: data.status || 'rascunho',
-  })
+  const owner_id = await getCurrentUserId()
+  const { data: row, error } = await supabase
+    .from('email_campaigns')
+    .insert({ ...toPatch(data), owner_id })
+    .select(CAMPAIGN_SELECT)
+    .single()
+  if (error) throw error
+  return mapCampaign(row)
 }
 
 export const updateCampaign = async (
@@ -214,26 +222,58 @@ export const deleteCampaign = async (id: string): Promise<boolean> => {
   return true
 }
 
-export const sendCampaign = async (
-  id: string,
-): Promise<{ sent: number; failed: number; total: number }> => {
-  return pb.send(`/backend/v1/send-campaign/${id}`, { method: 'POST' })
+// Assincrono desde a fase 3: so enfileira e volta em ms. sent/failed nao
+// sao mais conhecidos na hora - acompanhe via campaign.status/total_sent/
+// total_failed (Realtime) e a lista de logs, nao pelo retorno desta chamada.
+export interface QueueResult {
+  status: 'sending'
+  queued: number
+  ignored_blocked?: number
 }
 
-export const retryCampaignFailures = async (
-  id: string,
-): Promise<{ retried: number; stillFailed: number }> => {
-  return pb.send(`/backend/v1/retry-failures/${id}`, { method: 'POST' })
+export interface RequeueResult {
+  status: 'sending'
+  requeued: number
+  ignored_blocked?: number
 }
 
-export const getCampaignLogs = async (campaignId: string): Promise<EmailLogRecord[]> => {
-  return pb.collection('email_logs').getFullList<EmailLogRecord>({
-    filter: `campaign = "${campaignId}"`,
-    sort: '-created',
-    expand: 'contact',
+export const sendCampaign = async (id: string): Promise<QueueResult> => {
+  const { data, error } = await supabase.functions.invoke<QueueResult>('send-campaign', {
+    body: { id },
+  })
+  if (error) throw error
+  return data as QueueResult
+}
+
+export const retryCampaignFailures = async (id: string): Promise<RequeueResult> => {
+  const { data, error } = await supabase.functions.invoke<RequeueResult>('retry-campaign-failures', {
+    body: { id },
   })
   if (error) throw error
   return data as RequeueResult
+}
+
+// Envio pontual para uma selecao arbitraria de contatos (tela Contatos,
+// nao filtrada por campanha) usando um modelo escolhido na hora. Cria
+// uma campanha automatica por baixo (rastreabilidade/relatorio) - ver
+// queue_bulk_send (migration 0011).
+export interface BulkSendResult {
+  status: 'sending'
+  campaign_id: string
+  queued: number
+  ignored_blocked?: number
+}
+
+export const sendBulkEmail = async (
+  contactIds: string[],
+  templateId: string,
+  eventId: string,
+): Promise<BulkSendResult> => {
+  const { data, error } = await supabase.functions.invoke<BulkSendResult>('send-bulk-email', {
+    body: { contact_ids: contactIds, template_id: templateId, event_id: eventId },
+  })
+  if (error) throw error
+  return data as BulkSendResult
 }
 
 export const getCampaignLogs = async (campaignId: string): Promise<EmailLogRecord[]> => {
