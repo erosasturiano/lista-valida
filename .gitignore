@@ -57,3 +57,5 @@ scripts/known-emails.local.json
 
 # Clone aninhado do repositorio (nao deve ser versionado)
 lista-valida/
+
+.vercel
