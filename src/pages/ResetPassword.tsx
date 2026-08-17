@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { BrandLogoStacked } from '@/components/ui/logo'
-import { SENHA_MINIMA } from '@/services/auth'
+import { SENHA_MINIMA, resetPassword } from '@/services/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,15 +10,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import supabase from '@/lib/supabase/client'
 
-// Destino do link enviado por supabase.auth.resetPasswordForEmail
-// (use-auth.tsx nao chama isso direto - hoje so o script de migracao,
-// scripts/migrate-to-supabase.js, dispara esse e-mail). O supabase-js
-// detecta a sessao de recuperacao a partir do hash da propria URL
-// (detectSessionInUrl, padrao do createClient) - nao precisa ler nada
-// manualmente aqui.
+// O token chega no fragmento da URL (#token=), gravado la pela Edge Function
+// forgot-password. Fragmento nao e enviado ao servidor: nao aparece em log de
+// acesso e nao e consumido por scanner de e-mail que so abre o link.
+//
+// O caminho por sessao do Supabase continua aceito como reserva, para
+// links de recovery do GoTrue que ainda estejam validos (por exemplo os
+// disparados pelo painel do Supabase).
 export default function ResetPassword() {
   const navigate = useNavigate()
-  const [ready, setReady] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
+  const [temSessao, setTemSessao] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -27,22 +29,31 @@ export default function ResetPassword() {
   const [linkErro, setLinkErro] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
+  const ready = !!token || temSessao
+
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
+      if (event === 'PASSWORD_RECOVERY') setTemSessao(true)
     })
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true)
+      if (data.session) setTemSessao(true)
     })
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // Quando o token nao vale mais, o Supabase redireciona com o motivo no
-  // hash da URL (#error_code=otp_expired&...). Sem ler isso, a tela mostra
-  // o aviso generico e a pessoa nao distingue "o link expirou" de "abri a
-  // pagina direto".
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+
+    const recebido = params.get('token')
+    if (recebido) {
+      setToken(recebido)
+      // Tira o token da barra de enderecos para nao sobrar no historico do
+      // navegador nem em captura de tela.
+      window.history.replaceState(null, '', window.location.pathname)
+      return
+    }
+
+    // Fluxo antigo do GoTrue devolvia o motivo da falha no proprio hash.
     const codigo = params.get('error_code')
     if (!codigo) return
     if (codigo === 'otp_expired') {
@@ -67,13 +78,19 @@ export default function ResetPassword() {
       return
     }
     setSubmitting(true)
-    const { error: updateError } = await supabase.auth.updateUser({ password })
-    setSubmitting(false)
-    if (updateError) {
+    try {
+      if (token) {
+        await resetPassword(token, password)
+      } else {
+        const { error: updateError } = await supabase.auth.updateUser({ password })
+        if (updateError) throw updateError
+      }
+      setDone(true)
+    } catch {
       setError('Não foi possível redefinir sua senha. O link pode ter expirado — solicite um novo.')
-      return
+    } finally {
+      setSubmitting(false)
     }
-    setDone(true)
   }
 
   if (done) {
@@ -84,12 +101,12 @@ export default function ResetPassword() {
           <CardContent className="p-8 text-center space-y-4">
             <CheckCircle className="w-14 h-14 text-green-500 mx-auto" />
             <h1 className="text-xl font-bold text-slate-900">Senha redefinida</h1>
-            <p className="text-sm text-slate-600">Sua senha foi atualizada com sucesso.</p>
+            <p className="text-sm text-slate-600">Sua senha foi atualizada com sucesso. Entre com a nova senha.</p>
             <Button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/app')}
               className="w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white"
             >
-              Ir para o painel
+              Ir para o login
             </Button>
           </CardContent>
         </Card>
