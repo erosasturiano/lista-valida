@@ -86,8 +86,14 @@ export default function ResetPassword() {
         if (updateError) throw updateError
       }
       setDone(true)
-    } catch {
-      setError('Não foi possível redefinir sua senha. O link pode ter expirado — solicite um novo.')
+    } catch (err) {
+      // A Edge Function ja devolve o motivo em portugues (link expirado,
+      // senha curta, limite de tentativas). Descartar isso deixava a tela
+      // com uma mensagem generica que nao ajudava a agir.
+      setError(
+        (err as Error)?.message ||
+          'Não foi possível redefinir sua senha. O link pode ter expirado — solicite um novo.',
+      )
     } finally {
       setSubmitting(false)
     }

@@ -24,12 +24,34 @@ export const SENHA_MINIMA = 10
 // e-mail sai pelo Resend. O token viaja no fragmento da URL (#token=), que
 // nunca chega a servidor nenhum, e so e consumido no POST que troca a senha.
 
+// supabase-js embrulha qualquer resposta fora da faixa 2xx num
+// FunctionsHttpError e nao le o corpo: a tela mostrava "Edge Function
+// returned a non-2xx status code" no lugar da mensagem real ("Muitas
+// tentativas...", "Link invalido ou expirado..."). A resposta original fica
+// acessivel em error.context, que e o Response cru.
+async function mensagemDoErro(error: unknown, padrao: string): Promise<string> {
+  const contexto = (error as { context?: Response })?.context
+  if (!contexto || typeof contexto.json !== 'function') {
+    return (error as { message?: string })?.message || padrao
+  }
+  try {
+    const corpo = await contexto.json()
+    return corpo?.error || corpo?.message || padrao
+  } catch {
+    return padrao
+  }
+}
+
 export const forgotPassword = async (email: string): Promise<ForgotPasswordResponse> => {
   const { data, error } = await supabase.functions.invoke<ForgotPasswordResponse>(
     'forgot-password',
     { body: { email } },
   )
-  if (error) throw error
+  if (error) {
+    throw new Error(
+      await mensagemDoErro(error, 'Não foi possível processar sua solicitação. Tente novamente.'),
+    )
+  }
 
   return {
     message:
@@ -49,7 +71,11 @@ export const resetPassword = async (
   const { data, error } = await supabase.functions.invoke<ResetPasswordResponse>('reset-password', {
     body: { token, password },
   })
-  if (error) throw error
+  if (error) {
+    throw new Error(
+      await mensagemDoErro(error, 'Não foi possível redefinir a senha. Tente novamente.'),
+    )
+  }
 
   return { message: data?.message ?? 'Senha redefinida com sucesso.' }
 }
