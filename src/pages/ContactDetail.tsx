@@ -202,14 +202,14 @@ export default function ContactDetail() {
           </CardContent>
         </Card>
 
-        <Card className="border-indigo-100 shadow-xs">
+        <Card className="border-brand-blue-100 shadow-xs">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-bold text-indigo-900">Classificação IA</CardTitle>
+            <CardTitle className="text-sm font-bold text-brand-blue-900">Classificação IA</CardTitle>
             <Button
               size="sm"
               onClick={handleClassify}
               disabled={classifying}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-7 gap-1.5"
+              className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs h-7 gap-1.5"
             >
               <Sparkles className="w-3 h-3" />
               {classifying ? 'Classificando...' : 'Classificar'}
@@ -232,7 +232,7 @@ export default function ContactDetail() {
                     <Badge
                       key={idx}
                       variant="secondary"
-                      className="bg-indigo-50 text-indigo-700 text-[10px]"
+                      className="bg-brand-blue-50 text-brand-blue-700 text-[10px]"
                     >
                       {item}
                     </Badge>
@@ -289,7 +289,7 @@ export default function ContactDetail() {
             size="sm"
             onClick={handleSaveNotes}
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+            className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5"
           >
             <Save className="w-3.5 h-3.5" />
             {saving ? 'Salvando...' : 'Salvar Notas'}

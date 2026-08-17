@@ -36,7 +36,7 @@ export default function DomainSettings() {
       <Card className="border-slate-200 shadow-xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Globe className="w-4 h-4 text-indigo-600" />
+            <Globe className="w-4 h-4 text-brand-blue-600" />
             Domínio Personalizado
           </CardTitle>
           <CardDescription className="text-xs">
@@ -82,7 +82,7 @@ export default function DomainSettings() {
       <Card className="border-slate-200 shadow-xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Mail className="w-4 h-4 text-indigo-600" />
+            <Mail className="w-4 h-4 text-brand-blue-600" />
             Configuração do Resend
           </CardTitle>
           <CardDescription className="text-xs">
@@ -105,7 +105,7 @@ export default function DomainSettings() {
                   href="https://resend.com/domains"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-600 underline inline-flex items-center gap-0.5"
+                  className="text-brand-blue-600 underline inline-flex items-center gap-0.5"
                 >
                   resend.com/domains <ExternalLink className="w-3 h-3" />
                 </a>
@@ -128,7 +128,7 @@ export default function DomainSettings() {
       <Card className="border-slate-200 shadow-xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-indigo-600" />
+            <ShieldCheck className="w-4 h-4 text-brand-blue-600" />
             Verificação
           </CardTitle>
           <CardDescription className="text-xs">Confirme que tudo está funcionando</CardDescription>
@@ -142,7 +142,7 @@ export default function DomainSettings() {
                   href="https://listavalida.com.br"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-600 underline inline-flex items-center gap-0.5"
+                  className="text-brand-blue-600 underline inline-flex items-center gap-0.5"
                 >
                   https://listavalida.com.br <ExternalLink className="w-3 h-3" />
                 </a>{' '}
@@ -156,7 +156,7 @@ export default function DomainSettings() {
           <Button
             asChild
             size="sm"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 mt-2"
+            className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5 mt-2"
           >
             <Link to="/campanhas">
               <Send className="w-3.5 h-3.5" />

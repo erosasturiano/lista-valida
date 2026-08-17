@@ -1,5 +1,6 @@
 /* Main App Component - Handles routing (using react-router-dom), query client and other providers - use this file to add all routes */
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -24,6 +25,10 @@ import AccountSettings from './pages/AccountSettings'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 
+// Carregada sob demanda: a landing usa WebGL (ogl, ~90 kB) que nenhuma outra
+// tela precisa - sem o lazy, o login baixaria a biblioteca a toa.
+const Landing = lazy(() => import('./pages/Landing'))
+
 // ONLY IMPORT AND RENDER WORKING PAGES, NEVER ADD PLACEHOLDER COMPONENTS OR PAGES IN THIS FILE
 // AVOID REMOVING ANY CONTEXT PROVIDERS FROM THIS FILE (e.g. TooltipProvider, Toaster, Sonner)
 
@@ -37,7 +42,22 @@ const App = () => (
           <Route path="/descadastrar/:logId" element={<Unsubscribe />} />
           <Route path="/esqueci-senha" element={<ForgotPassword />} />
           <Route path="/redefinir-senha" element={<ResetPassword />} />
-          <Route path="/" element={<Index />} />
+          {/* Landing publica na raiz: fora do Layout, sem sidebar nem topbar. */}
+          <Route
+            path="/"
+            element={
+              <Suspense fallback={<div className="min-h-screen w-full bg-white" />}>
+                <Landing />
+              </Suspense>
+            }
+          />
+          {/* Porta de entrada da aplicacao. Fica fora do Layout de proposito:
+              e a tela de login, e o Layout redireciona quem nao tem sessao
+              para ca - envolver os dois criaria um laco de redirecionamento.
+              Com sessao ativa, Index manda direto para /dashboard. */}
+          <Route path="/app" element={<Index />} />
+          {/* A landing morava em /landing antes de assumir a raiz. */}
+          <Route path="/landing" element={<Navigate to="/" replace />} />
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/contatos" element={<Contacts />} />

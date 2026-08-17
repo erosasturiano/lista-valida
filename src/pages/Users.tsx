@@ -150,7 +150,7 @@ export default function Users() {
         <Button
           onClick={() => setCreateOpen(true)}
           size="sm"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+          className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5"
         >
           <UserPlus className="w-3.5 h-3.5" />
           <span>Novo Usuário</span>
@@ -204,13 +204,13 @@ export default function Users() {
                 <TableRow key={u.id} className="hover:bg-slate-50/80">
                   <TableCell>
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-full bg-brand-blue-100 text-brand-blue-700 font-bold text-[11px] flex items-center justify-center">
                         {(u.name || u.email).substring(0, 2).toUpperCase()}
                       </div>
                       <span className="text-xs font-bold text-slate-900">
                         {u.name || 'Sem nome'}
                         {u.id === currentUser?.id && (
-                          <span className="ml-1.5 text-[10px] text-indigo-500">(você)</span>
+                          <span className="ml-1.5 text-[10px] text-brand-blue-500">(você)</span>
                         )}
                       </span>
                     </div>
@@ -221,7 +221,7 @@ export default function Users() {
                       variant="secondary"
                       className={
                         u.role === 'admin'
-                          ? 'bg-indigo-50 text-indigo-700 text-[10px]'
+                          ? 'bg-brand-blue-50 text-brand-blue-700 text-[10px]'
                           : 'bg-slate-100 text-slate-600 text-[10px]'
                       }
                     >
@@ -329,7 +329,7 @@ export default function Users() {
               size="sm"
               onClick={handleCreate}
               disabled={creating}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+              className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs"
             >
               {creating ? 'Criando...' : 'Criar Usuário'}
             </Button>

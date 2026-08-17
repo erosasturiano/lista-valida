@@ -304,7 +304,7 @@ export default function CampaignDetail() {
                 <ul className="space-y-1">
                   {diagnostic.guidance.map((g, idx) => (
                     <li key={idx} className="text-[11px] text-slate-600 flex items-start gap-1.5">
-                      <span className="text-indigo-500 mt-0.5">→</span>
+                      <span className="text-brand-blue-500 mt-0.5">→</span>
                       <span>{g}</span>
                     </li>
                   ))}
@@ -316,7 +316,7 @@ export default function CampaignDetail() {
               <Button
                 asChild
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 h-8"
+                className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5 h-8"
               >
                 <Link to="/configuracoes">
                   <Settings className="w-3.5 h-3.5" />
@@ -428,9 +428,9 @@ export default function CampaignDetail() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-indigo-100 bg-gradient-to-br from-indigo-50 to-white shadow-xs">
+          <Card className="border-brand-blue-100 bg-gradient-to-br from-brand-blue-50 to-white shadow-xs">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold text-indigo-900">Disparo</CardTitle>
+              <CardTitle className="text-sm font-bold text-brand-blue-900">Disparo</CardTitle>
               <CardDescription className="text-xs">
                 Envie e-mails para os contatos filtrados
               </CardDescription>
@@ -470,7 +470,7 @@ export default function CampaignDetail() {
               <Button
                 onClick={handleSend}
                 disabled={sending || retrying || campaign.status === 'enviando'}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-10 gap-2"
+                className="w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs h-10 gap-2"
               >
                 {sending ? (
                   <>
@@ -489,7 +489,7 @@ export default function CampaignDetail() {
                   onClick={handleRetryFailures}
                   disabled={retrying || sending || campaign.status === 'enviando'}
                   variant="outline"
-                  className="w-full text-xs h-10 gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                  className="w-full text-xs h-10 gap-2 border-brand-blue-200 text-brand-blue-700 hover:bg-brand-blue-50"
                 >
                   {retrying ? (
                     <>

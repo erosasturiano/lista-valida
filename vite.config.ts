@@ -34,10 +34,6 @@ export default defineConfig(({ mode }) => ({
         find: '@',
         replacement: path.resolve(__dirname, './src'),
       },
-      {
-        find: /zod\/v4\/core/,
-        replacement: path.resolve(__dirname, 'node_modules', 'zod', 'v4', 'core'),
-      }
     ],
   },
 }))

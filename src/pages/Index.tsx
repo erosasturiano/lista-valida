@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
-import { Sparkles, CheckCircle, Eye, EyeOff, Lock, Mail, User, ArrowRight } from 'lucide-react'
+import { CheckCircle, Eye, EyeOff, Lock, Mail, User, ArrowRight, ArrowLeft } from 'lucide-react'
+import { BrandLogoStacked } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -50,16 +51,13 @@ export default function Index() {
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-slate-50">
       {/* Left Panel - Branding (Desktop) */}
       <div className="hidden lg:flex flex-col justify-between p-12 bg-slate-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/60 via-slate-900 to-purple-950/70" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-900/60 via-slate-900 to-brand-navy-950/70" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-brand-blue-600/20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-bold text-xl tracking-tight">Lista Válida</span>
-          </div>
+          {/* Variante branca: a marca colorida nao teria contraste sobre o
+              slate-900 deste painel. */}
+          <BrandLogoStacked variante="branco" className="h-16" />
         </div>
 
         <div className="relative z-10 max-w-lg my-auto py-12">
@@ -72,7 +70,7 @@ export default function Index() {
           </p>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-brand-blue-400 shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-sm text-white">Classificação por IA</h4>
                 <p className="text-xs text-slate-400">
@@ -81,7 +79,7 @@ export default function Index() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-brand-blue-400 shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-sm text-white">Perfis Personalizados</h4>
                 <p className="text-xs text-slate-400">
@@ -90,7 +88,7 @@ export default function Index() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-brand-blue-400 shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-semibold text-sm text-white">Importação Simples em CSV</h4>
                 <p className="text-xs text-slate-400">
@@ -110,11 +108,8 @@ export default function Index() {
       <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center lg:hidden">
-            <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg mx-auto mb-3">
-              <Sparkles className="w-7 h-7 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Lista Válida</h2>
-            <p className="text-xs text-slate-500 mt-1">Higienização e Qualificação de Mailings</p>
+            <BrandLogoStacked className="h-20 mx-auto mb-3" />
+            <p className="text-xs text-slate-500">Higienização e Qualificação de Mailings</p>
           </div>
 
           <Card className="border-slate-200 shadow-md">
@@ -207,7 +202,7 @@ export default function Index() {
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold shadow-sm text-sm h-10 gap-2"
+                  className="w-full bg-gradient-to-r from-brand-blue-600 to-brand-blue-700 hover:from-brand-blue-700 hover:to-brand-blue-800 text-white font-semibold shadow-sm text-sm h-10 gap-2"
                 >
                   {submitting
                     ? 'Processando...'
@@ -221,7 +216,7 @@ export default function Index() {
                 {mode === 'signin' && (
                   <Link
                     to="/esqueci-senha"
-                    className="block text-xs text-slate-500 hover:text-indigo-600 font-medium transition-colors"
+                    className="block text-xs text-slate-500 hover:text-brand-blue-600 font-medium transition-colors"
                   >
                     Esqueci minha senha
                   </Link>
@@ -232,7 +227,7 @@ export default function Index() {
                     setMode(mode === 'signin' ? 'signup' : 'signin')
                     setError(null)
                   }}
-                  className="text-xs text-slate-600 hover:text-indigo-600 font-medium underline"
+                  className="text-xs text-slate-600 hover:text-brand-blue-600 font-medium underline"
                 >
                   {mode === 'signin'
                     ? 'Não tem uma conta? Cadastre-se'
@@ -241,6 +236,21 @@ export default function Index() {
               </div>{' '}
             </CardContent>
           </Card>
+
+          {/* pt no wrapper em vez de mt no botao: o container usa space-y-6,
+              que ja aplica margin-top nos irmaos - um mt aqui competiria com
+              ele. O padding soma sem conflito. */}
+          <div className="pt-6">
+            <Button
+              asChild
+              className="w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white font-semibold shadow-sm text-sm h-10"
+            >
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar para a página inicial
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

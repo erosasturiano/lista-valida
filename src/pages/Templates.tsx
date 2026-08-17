@@ -18,9 +18,9 @@ import { useToast } from '@/hooks/use-toast'
 const CATEGORY_COLORS: Record<string, string> = {
   RSVP: 'bg-rose-50 text-rose-700 border-rose-200',
   'Envio de Certificado': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Convite: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  Convite: 'bg-brand-blue-50 text-brand-blue-700 border-brand-blue-200',
   Pitch: 'bg-amber-50 text-amber-700 border-amber-200',
-  'Convite para Comunidade Exclusiva': 'bg-purple-50 text-purple-700 border-purple-200',
+  'Convite para Comunidade Exclusiva': 'bg-brand-navy-50 text-brand-navy-700 border-brand-navy-200',
 }
 
 export default function Templates() {
@@ -84,7 +84,7 @@ export default function Templates() {
         <Button
           onClick={handleOpenCreate}
           size="sm"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 self-start"
+          className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5 self-start"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Novo Modelo</span>
@@ -130,7 +130,7 @@ export default function Templates() {
                   >
                     <CardContent className="p-4 flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+                        <div className="p-2 rounded-lg bg-brand-blue-50 text-brand-blue-600 shrink-0">
                           <FileText className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
@@ -149,7 +149,7 @@ export default function Templates() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenEdit(t)}
-                          className="h-8 w-8 text-slate-500 hover:text-indigo-600"
+                          className="h-8 w-8 text-slate-500 hover:text-brand-blue-600"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>

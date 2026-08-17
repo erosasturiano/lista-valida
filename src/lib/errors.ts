@@ -28,12 +28,27 @@ function asSupabaseError(error: unknown): SupabaseErrorShape | null {
 // atribuido ao campo errado no formulario.
 const KNOWN_COLUMNS = ['sender_email', 'sender_name', 'email', 'name', 'subject', 'body', 'category']
 
+// O Postgres nomeia a coluna de forma estruturada: `column "x"` em
+// not-null e `Key (x)=` em unicidade. Ler dai e mais confiavel que varrer a
+// mensagem inteira, porque o nome da tabela costuma conter o nome de outra
+// coluna - "email_campaigns" contem "email", e a varredura atribuia o erro
+// ao campo errado. Se a coluna estruturada nao tiver campo no formulario,
+// devolve null e a tela cai no toast, que e o comportamento best-effort
+// descrito no topo do arquivo.
+function extractColumn(text: string): string | null {
+  const estruturado = /column "([^"]+)"/.exec(text) ?? /key \(([^)]+)\)=/.exec(text)
+  if (estruturado) {
+    return KNOWN_COLUMNS.includes(estruturado[1]) ? estruturado[1] : null
+  }
+  return KNOWN_COLUMNS.find((c) => text.includes(c)) ?? null
+}
+
 export function extractFieldErrors(error: unknown): FieldErrors {
   const err = asSupabaseError(error)
   if (!err) return {}
 
   const text = `${err.message ?? ''} ${err.details ?? ''}`.toLowerCase()
-  const column = KNOWN_COLUMNS.find((c) => text.includes(c))
+  const column = extractColumn(text)
   if (!column) return {}
 
   // 23505 = unique_violation, 23502 = not_null_violation.

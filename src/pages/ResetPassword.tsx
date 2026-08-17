@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { BrandLogoStacked } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,7 +58,8 @@ export default function ResetPassword() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 gap-6">
+        <BrandLogoStacked className="h-20" />
         <Card className="max-w-md w-full border-slate-200 shadow-md">
           <CardContent className="p-8 text-center space-y-4">
             <CheckCircle className="w-14 h-14 text-green-500 mx-auto" />
@@ -65,7 +67,7 @@ export default function ResetPassword() {
             <p className="text-sm text-slate-600">Sua senha foi atualizada com sucesso.</p>
             <Button
               onClick={() => navigate('/dashboard')}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white"
             >
               Ir para o painel
             </Button>
@@ -76,7 +78,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 gap-6">
+      <BrandLogoStacked className="h-20" />
       <Card className="max-w-md w-full border-slate-200 shadow-md">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
@@ -140,7 +143,7 @@ export default function ResetPassword() {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+              className="w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white font-semibold"
             >
               {submitting ? 'Salvando...' : 'Redefinir senha'}
             </Button>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { CheckCircle2, AlertCircle, Loader2, MailX } from 'lucide-react'
+import { BrandLogoStacked } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -41,7 +42,8 @@ export default function Unsubscribe() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 gap-6">
+      <BrandLogoStacked className="h-20" />
       <Card className="max-w-md w-full border-slate-200 shadow-md">
         <CardContent className="p-8 text-center space-y-4">
           {status === 'success' ? (
@@ -59,15 +61,15 @@ export default function Unsubscribe() {
               <p className="text-sm text-slate-600">{error}</p>
               <Button
                 onClick={handleConfirm}
-                className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="mt-4 bg-brand-blue-600 hover:bg-brand-blue-700 text-white"
               >
                 Tentar novamente
               </Button>
             </>
           ) : (
             <>
-              <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center mx-auto">
-                <MailX className="w-7 h-7 text-indigo-600" />
+              <div className="w-14 h-14 rounded-full bg-brand-blue-50 flex items-center justify-center mx-auto">
+                <MailX className="w-7 h-7 text-brand-blue-600" />
               </div>
               <h1 className="text-xl font-bold text-slate-900">Confirmar Descadastro</h1>
               <p className="text-sm text-slate-600">
@@ -77,7 +79,7 @@ export default function Unsubscribe() {
               <Button
                 onClick={handleConfirm}
                 disabled={status === 'loading'}
-                className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                className="mt-4 w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white font-semibold"
               >
                 {status === 'loading' ? (
                   <>

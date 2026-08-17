@@ -1,3 +1,4 @@
+import { BrandLogoStacked } from '@/components/ui/logo'
 import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -5,7 +6,6 @@ import {
   Upload,
   Calendar,
   LogOut,
-  Sparkles,
   X,
   Mail,
   FileText,
@@ -52,26 +52,27 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col h-full border-r border-slate-800">
-      <div className="p-5 flex items-center justify-between border-b border-slate-800">
-        <Link to="/dashboard" className="flex items-center gap-3" onClick={onCloseMobile}>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-indigo-400 flex items-center justify-center shadow-md">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <span className="font-bold text-base tracking-tight block text-white">
-              Lista Válida
-            </span>
-            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider block">
-              Higienização AI
-            </span>
-          </div>
+      {/* relative + botao absoluto: assim a marca fica centralizada de verdade,
+          sem deslocar quando o botao de fechar aparece no mobile. */}
+      <div className="relative p-5 border-b border-slate-800">
+        {/* Variante branca: a marca colorida sobre o slate-900 da sidebar
+            teria contraste de ~1,1:1 e ficaria ilegivel. */}
+        <Link
+          to="/dashboard"
+          className="flex flex-col items-center gap-2"
+          onClick={onCloseMobile}
+        >
+          <BrandLogoStacked variante="branco" className="h-16" />
+          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider text-center">
+            Higienização AI
+          </span>
         </Link>
         {onCloseMobile && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onCloseMobile}
-            className="lg:hidden text-slate-400 hover:text-white hover:bg-slate-800"
+            className="lg:hidden absolute right-3 top-3 text-slate-400 hover:text-white hover:bg-slate-800"
           >
             <X className="w-5 h-5" />
           </Button>
@@ -92,7 +93,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all relative group',
                 isActive
-                  ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-brand-blue-600 to-brand-blue-700 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white',
               )}
             >
@@ -113,8 +114,8 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
 
       <div className="p-4 border-t border-slate-800 bg-slate-900/50">
         <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 border border-indigo-500/30">
-            <AvatarFallback className="bg-indigo-600 text-white font-bold text-xs">
+          <Avatar className="h-9 w-9 border border-brand-blue-500/30">
+            <AvatarFallback className="bg-brand-blue-600 text-white font-bold text-xs">
               {getInitials(user?.name || user?.email)}
             </AvatarFallback>
           </Avatar>

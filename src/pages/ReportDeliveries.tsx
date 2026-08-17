@@ -298,7 +298,7 @@ export default function ReportDeliveries() {
           icon={Send}
           label="Total de Enviados"
           value={String(summary.enviados)}
-          color="bg-indigo-50 text-indigo-600"
+          color="bg-brand-blue-50 text-brand-blue-600"
         />
         <SummaryCard
           icon={CheckCircle2}
@@ -316,7 +316,7 @@ export default function ReportDeliveries() {
           icon={TrendingUp}
           label="Taxa de Abertura"
           value={`${summary.taxaAbertura.toFixed(1)}%`}
-          color="bg-purple-50 text-purple-600"
+          color="bg-brand-navy-50 text-brand-navy-600"
         />
         <SummaryCard
           icon={MousePointerClick}

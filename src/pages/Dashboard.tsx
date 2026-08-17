@@ -178,7 +178,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="shadow-xs border-slate-200 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
+            <div className="p-2.5 rounded-xl bg-brand-blue-50 text-brand-blue-600">
               <Users className="w-5 h-5" />
             </div>
             <div>
@@ -234,26 +234,26 @@ export default function Dashboard() {
 
         <Card className="shadow-xs border-slate-200 hover:shadow-md transition-shadow">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600">
+            <div className="p-2.5 rounded-xl bg-brand-navy-50 text-brand-navy-600">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 Pendentes IA
               </p>
-              <h3 className="text-2xl font-extrabold text-purple-600">{pendentesClassificacao}</h3>
+              <h3 className="text-2xl font-extrabold text-brand-navy-600">{pendentesClassificacao}</h3>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* AI Progress Card */}
-      <Card className="border-indigo-100 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white shadow-md">
+      <Card className="border-brand-blue-100 bg-gradient-to-r from-brand-blue-900 via-slate-900 to-brand-blue-950 text-white shadow-md">
         <CardContent className="p-5 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 flex-1 w-full">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">
+              <Sparkles className="w-4 h-4 text-brand-blue-400" />
+              <span className="text-xs font-semibold text-brand-blue-300 uppercase tracking-wider">
                 Status da Higienização AI
               </span>
             </div>
@@ -261,7 +261,7 @@ export default function Dashboard() {
               <h3 className="text-lg font-bold text-white">
                 {classificadosCount} de {totalContacts} contatos qualificados
               </h3>
-              <span className="text-sm font-bold text-indigo-300">{progressPercent}%</span>
+              <span className="text-sm font-bold text-brand-blue-300">{progressPercent}%</span>
             </div>
             <Progress value={progressPercent} className="h-2.5 bg-slate-800" />
           </div>
@@ -269,7 +269,7 @@ export default function Dashboard() {
           <Button
             onClick={handleClassifyAllPending}
             disabled={classifyingBatch || pendentesClassificacao === 0}
-            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold text-xs h-10 px-5 gap-2 shadow-sm shrink-0 w-full md:w-auto"
+            className="bg-gradient-to-r from-brand-blue-500 to-brand-navy-500 hover:from-brand-blue-600 hover:to-brand-navy-600 text-white font-semibold text-xs h-10 px-5 gap-2 shadow-sm shrink-0 w-full md:w-auto"
           >
             {classifyingBatch ? (
               <>
@@ -299,7 +299,7 @@ export default function Dashboard() {
             Importe uma planilha em formato CSV para iniciar a qualificação dos dados com
             inteligência artificial.
           </p>
-          <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+          <Button asChild size="sm" className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white gap-2">
             <Link to="/importar">
               <Upload className="w-4 h-4" />
               <span>Importar mailing</span>
@@ -437,7 +437,7 @@ export default function Dashboard() {
                   Visualização rápida da base do mailing (lista)
                 </CardDescription>{' '}
               </div>
-              <Button asChild variant="ghost" size="sm" className="text-xs text-indigo-600 gap-1">
+              <Button asChild variant="ghost" size="sm" className="text-xs text-brand-blue-600 gap-1">
                 <Link to="/contatos">
                   <span>Ver todos</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -453,7 +453,7 @@ export default function Dashboard() {
                     className="p-3.5 px-6 flex items-center justify-between hover:bg-slate-50 transition-colors block"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-brand-blue-100 text-brand-blue-700 font-bold text-xs flex items-center justify-center">
                         {contact.name.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
@@ -480,7 +480,7 @@ export default function Dashboard() {
                         variant="outline"
                         className={
                           contact.classification_status === 'Classificado'
-                            ? 'border-indigo-200 text-indigo-700 bg-indigo-50/50'
+                            ? 'border-brand-blue-200 text-brand-blue-700 bg-brand-blue-50/50'
                             : 'text-slate-500'
                         }
                       >

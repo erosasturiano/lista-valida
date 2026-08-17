@@ -46,9 +46,9 @@ const SAMPLE_VALUES: Record<string, string> = {
 const CATEGORY_COLORS: Record<string, string> = {
   RSVP: 'bg-rose-50 text-rose-700 border-rose-200',
   'Envio de Certificado': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  Convite: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  Convite: 'bg-brand-blue-50 text-brand-blue-700 border-brand-blue-200',
   Pitch: 'bg-amber-50 text-amber-700 border-amber-200',
-  'Convite para Comunidade Exclusiva': 'bg-purple-50 text-purple-700 border-purple-200',
+  'Convite para Comunidade Exclusiva': 'bg-brand-navy-50 text-brand-navy-700 border-brand-navy-200',
 }
 
 interface TemplateFormDialogProps {
@@ -161,7 +161,7 @@ export function TemplateFormDialog({
       <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <FileText className="w-4 h-4 text-indigo-600" />
+            <FileText className="w-4 h-4 text-brand-blue-600" />
             {editTemplate ? 'Editar Modelo' : 'Novo Modelo de E-mail'}
           </DialogTitle>
         </DialogHeader>
@@ -247,7 +247,7 @@ export function TemplateFormDialog({
                     key={token}
                     type="button"
                     onClick={() => insertToken(token)}
-                    className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-mono border border-indigo-200 hover:bg-indigo-100 transition-colors"
+                    className="px-2 py-0.5 rounded bg-brand-blue-50 text-brand-blue-700 text-[10px] font-mono border border-brand-blue-200 hover:bg-brand-blue-100 transition-colors"
                   >
                     {token}
                   </button>
@@ -258,7 +258,7 @@ export function TemplateFormDialog({
               <button
                 type="button"
                 onClick={() => setBody((prev) => prev + UNSUBSCRIBE_BLOCK)}
-                className="px-2 py-1 rounded bg-purple-50 text-purple-700 text-[10px] font-medium border border-purple-200 hover:bg-purple-100 transition-colors"
+                className="px-2 py-1 rounded bg-brand-navy-50 text-brand-navy-700 text-[10px] font-medium border border-brand-navy-200 hover:bg-brand-navy-100 transition-colors"
               >
                 + Inserir bloco de descadastro (LGPD)
               </button>
@@ -308,7 +308,7 @@ export function TemplateFormDialog({
             size="sm"
             onClick={handleSave}
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+            className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             {saving ? 'Salvando...' : editTemplate ? 'Salvar Alterações' : 'Salvar Modelo'}

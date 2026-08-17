@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BrandMark } from '@/components/ui/logo'
 import { Menu, Upload, Calendar, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useEventContext } from '@/contexts/event-context'
@@ -50,14 +51,18 @@ export function Topbar({ onOpenMobileSidebar }: TopbarProps) {
           <Menu className="w-5 h-5" />
         </Button>
 
+        {/* Abaixo de lg a sidebar fica oculta, entao a marca so
+            aparece aqui. */}
+        <BrandMark className="h-7 lg:hidden" />
+
         {/* Global Event Selector */}
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-indigo-600 hidden sm:inline-block" />
+          <Calendar className="w-4 h-4 text-brand-blue-600 hidden sm:inline-block" />
           <span className="text-xs font-semibold text-slate-500 hidden md:inline-block">
             Mailing (lista):
           </span>
           <Select value={selectedEventId || ''} onValueChange={(val) => setSelectedEventId(val)}>
-            <SelectTrigger className="w-[180px] sm:w-[220px] h-9 text-xs font-medium bg-slate-50 border-slate-200 focus:ring-indigo-500">
+            <SelectTrigger className="w-[180px] sm:w-[220px] h-9 text-xs font-medium bg-slate-50 border-slate-200 focus:ring-brand-blue-500">
               <SelectValue placeholder="Selecione um mailing (lista)" />
             </SelectTrigger>
             <SelectContent>
@@ -81,7 +86,7 @@ export function Topbar({ onOpenMobileSidebar }: TopbarProps) {
         <Button
           asChild
           size="sm"
-          className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-xs text-xs gap-1.5 h-9"
+          className="bg-gradient-to-r from-brand-blue-600 to-brand-blue-700 hover:from-brand-blue-700 hover:to-brand-blue-800 text-white shadow-xs text-xs gap-1.5 h-9"
         >
           <Link to="/importar">
             <Upload className="w-3.5 h-3.5" />
@@ -93,8 +98,8 @@ export function Topbar({ onOpenMobileSidebar }: TopbarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-9 w-9 border border-indigo-100">
-                <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold text-xs">
+              <Avatar className="h-9 w-9 border border-brand-blue-100">
+                <AvatarFallback className="bg-brand-blue-100 text-brand-blue-700 font-bold text-xs">
                   {getInitials(user?.name || user?.email)}
                 </AvatarFallback>
               </Avatar>

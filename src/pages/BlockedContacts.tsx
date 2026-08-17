@@ -33,7 +33,7 @@ import { useToast } from '@/hooks/use-toast'
 
 const reasonColors: Record<string, string> = {
   Reclamação: 'bg-rose-50 text-rose-700',
-  Descadastro: 'bg-indigo-50 text-indigo-700',
+  Descadastro: 'bg-brand-blue-50 text-brand-blue-700',
   Bounce: 'bg-amber-50 text-amber-700',
   Manual: 'bg-slate-100 text-slate-600',
 }
@@ -108,7 +108,7 @@ export default function BlockedContacts() {
         <Button
           onClick={() => setDialogOpen(true)}
           size="sm"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+          className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Adicionar bloqueado</span>

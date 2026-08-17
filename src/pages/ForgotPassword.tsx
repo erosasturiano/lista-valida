@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Mail, Send, CheckCircle2, Loader2, Sparkles } from 'lucide-react'
+import { ArrowLeft, Mail, Send, CheckCircle2, Loader2 } from 'lucide-react'
+import { BrandLogoStacked } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -37,11 +38,8 @@ export default function ForgotPassword() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg mx-auto mb-3">
-            <Sparkles className="w-7 h-7 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">Lista Válida</h2>
-          <p className="text-xs text-slate-500 mt-1">Higienização e Qualificação de Mailings</p>
+          <BrandLogoStacked className="h-20 mx-auto mb-3" />
+          <p className="text-xs text-slate-500">Higienização e Qualificação de Mailings</p>
         </div>
 
         <Card className="border-slate-200 shadow-md">
@@ -66,9 +64,9 @@ export default function ForgotPassword() {
                 </p>
                 <Button
                   asChild
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                  className="w-full bg-brand-blue-600 hover:bg-brand-blue-700 text-white font-semibold"
                 >
-                  <Link to="/">
+                  <Link to="/app">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Voltar para o login
                   </Link>
@@ -105,7 +103,7 @@ export default function ForgotPassword() {
                   <Button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold shadow-sm text-sm h-10 gap-2"
+                    className="w-full bg-gradient-to-r from-brand-blue-600 to-brand-blue-700 hover:from-brand-blue-700 hover:to-brand-blue-800 text-white font-semibold shadow-sm text-sm h-10 gap-2"
                   >
                     {submitting ? (
                       <>
@@ -123,8 +121,8 @@ export default function ForgotPassword() {
 
                 <div className="text-center pt-2">
                   <Link
-                    to="/"
-                    className="text-xs text-slate-600 hover:text-indigo-600 font-medium underline inline-flex items-center gap-1"
+                    to="/app"
+                    className="text-xs text-slate-600 hover:text-brand-blue-600 font-medium underline inline-flex items-center gap-1"
                   >
                     <ArrowLeft className="w-3 h-3" />
                     Voltar para o login

@@ -77,7 +77,7 @@ export default function Campaigns() {
           <Button
             onClick={() => setDialogOpen(true)}
             size="sm"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 self-start"
+            className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5 self-start"
             disabled={!selectedEvent?.id}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -111,13 +111,13 @@ export default function Campaigns() {
               >
                 <CardContent className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+                    <div className="p-2 rounded-lg bg-brand-blue-50 text-brand-blue-600 shrink-0">
                       <Mail className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <Link
                         to={`/campanhas/${c.id}`}
-                        className="font-bold text-xs text-slate-900 hover:text-indigo-600 block truncate"
+                        className="font-bold text-xs text-slate-900 hover:text-brand-blue-600 block truncate"
                       >
                         {c.name}
                       </Link>

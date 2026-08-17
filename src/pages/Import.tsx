@@ -362,9 +362,9 @@ export default function Import() {
         {['1. Envio do arquivo', '2. Mapeamento', '3. Resultado'].map((label, i) => (
           <div
             key={label}
-            className={`flex items-center justify-center gap-1.5 ${step === i + 1 ? 'text-indigo-600 border-b-2 border-indigo-600 pb-2' : 'text-slate-400'}`}
+            className={`flex items-center justify-center gap-1.5 ${step === i + 1 ? 'text-brand-blue-600 border-b-2 border-brand-blue-600 pb-2' : 'text-slate-400'}`}
           >
-            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px]">
+            <span className="w-5 h-5 rounded-full bg-brand-blue-100 text-brand-blue-700 flex items-center justify-center text-[10px]">
               {i + 1}
             </span>
             <span>{label}</span>
@@ -383,8 +383,8 @@ export default function Import() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors bg-slate-50/50 relative">
-              <FileSpreadsheet className="w-10 h-10 text-indigo-500 mx-auto mb-3" />
+            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-brand-blue-500 transition-colors bg-slate-50/50 relative">
+              <FileSpreadsheet className="w-10 h-10 text-brand-blue-500 mx-auto mb-3" />
               <p className="text-xs font-bold text-slate-800 mb-1">
                 Arraste seu arquivo ou clique para procurar
               </p>
@@ -397,7 +397,7 @@ export default function Import() {
               />
               <Button
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs pointer-events-none"
+                className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs pointer-events-none"
               >
                 Selecionar arquivo
               </Button>
@@ -572,7 +572,7 @@ export default function Import() {
                 </Button>
                 <Button
                   onClick={handleStartImport}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 px-6 gap-2"
+                  className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs h-9 px-6 gap-2"
                 >
                   <span>Iniciar Importação ({csvRows.length} linhas)</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -684,7 +684,7 @@ export default function Import() {
 
                 {classifying && (
                   <div className="space-y-3 border-t border-slate-100 pt-4">
-                    <div className="flex items-center gap-2 text-indigo-700">
+                    <div className="flex items-center gap-2 text-brand-blue-700">
                       <Sparkles className="w-4 h-4 animate-pulse" />
                       <span className="text-xs font-bold">Classificação IA em andamento...</span>
                     </div>
@@ -696,9 +696,9 @@ export default function Import() {
                 )}
 
                 {!classifying && classifiedCount > 0 && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-indigo-50 border border-indigo-100">
-                    <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-                    <span className="text-xs text-indigo-800 font-medium">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-brand-blue-50 border border-brand-blue-100">
+                    <CheckCircle2 className="w-4 h-4 text-brand-blue-600" />
+                    <span className="text-xs text-brand-blue-800 font-medium">
                       {classifiedCount} contatos classificados com IA! Perfis, interesses e
                       mensagens personalizadas foram gerados.
                     </span>
@@ -723,7 +723,7 @@ export default function Import() {
                     <Button
                       asChild
                       size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+                      className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5"
                     >
                       <Link to="/contatos">
                         <span>Ver contatos do evento</span>
@@ -774,7 +774,7 @@ export default function Import() {
             <Button
               size="sm"
               onClick={handleCreateNewEvent}
-              className="bg-indigo-600 text-white text-xs"
+              className="bg-brand-blue-600 text-white text-xs"
             >
               Criar Mailing
             </Button>

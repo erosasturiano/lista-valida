@@ -132,7 +132,7 @@ export function CampaignFormDialog({
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <Mail className="w-4 h-4 text-indigo-600" />
+            <Mail className="w-4 h-4 text-brand-blue-600" />
             Nova Campanha de E-mail
           </DialogTitle>
         </DialogHeader>
@@ -140,7 +140,7 @@ export function CampaignFormDialog({
           {/* Template Selector */}
           <div className="space-y-1">
             <Label className="text-xs font-semibold flex items-center gap-1.5">
-              <FileText className="w-3 h-3 text-indigo-500" />
+              <FileText className="w-3 h-3 text-brand-blue-500" />
               Modelo de E-mail
             </Label>
             <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
@@ -323,7 +323,7 @@ export function CampaignFormDialog({
             size="sm"
             onClick={handleCreate}
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+            className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs"
           >
             {saving ? 'Criando...' : 'Criar Campanha'}
           </Button>

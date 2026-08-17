@@ -151,7 +151,7 @@ export default function Events() {
         <Button
           onClick={openCreate}
           size="sm"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 self-start"
+          className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5 self-start"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Novo Mailing</span>
@@ -187,7 +187,7 @@ export default function Events() {
             <Button
               onClick={openCreate}
               size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
+              className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" /> Novo Mailing
             </Button>
@@ -207,7 +207,7 @@ export default function Events() {
             >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+                  <div className="p-2 rounded-lg bg-brand-blue-50 text-brand-blue-600 shrink-0">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div className="flex gap-1">
@@ -316,7 +316,7 @@ export default function Events() {
               size="sm"
               onClick={handleSave}
               disabled={saving}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+              className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs"
             >
               {saving ? 'Salvando...' : editTarget ? 'Salvar' : 'Criar Mailing'}
             </Button>
