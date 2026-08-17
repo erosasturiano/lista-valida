@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { BrandLogoStacked } from '@/components/ui/logo'
+import { SENHA_MINIMA } from '@/services/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,6 +24,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [linkErro, setLinkErro] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
   useEffect(() => {
@@ -35,11 +37,29 @@ export default function ResetPassword() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  // Quando o token nao vale mais, o Supabase redireciona com o motivo no
+  // hash da URL (#error_code=otp_expired&...). Sem ler isso, a tela mostra
+  // o aviso generico e a pessoa nao distingue "o link expirou" de "abri a
+  // pagina direto".
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const codigo = params.get('error_code')
+    if (!codigo) return
+    if (codigo === 'otp_expired') {
+      setLinkErro('Este link expirou ou já foi usado. Solicite um novo em "Esqueci minha senha".')
+      return
+    }
+    setLinkErro(params.get('error_description') || 'Não foi possível validar este link.')
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (password.length < 8) {
-      setError('A senha precisa ter no mínimo 8 caracteres.')
+    // Mesmo minimo do cadastro (src/pages/Index.tsx). Com 8 aqui, dava para
+    // driblar a regra de 10: cadastrar, pedir redefinicao e trocar por uma
+    // senha mais curta.
+    if (password.length < SENHA_MINIMA) {
+      setError(`A senha precisa ter no mínimo ${SENHA_MINIMA} caracteres.`)
       return
     }
     if (password !== confirmPassword) {
@@ -88,7 +108,12 @@ export default function ResetPassword() {
           <CardDescription>Escolha uma nova senha para acessar sua conta.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!ready && (
+          {linkErro && (
+            <Alert variant="destructive" className="py-2 text-xs">
+              <AlertDescription>{linkErro}</AlertDescription>
+            </Alert>
+          )}
+          {!ready && !linkErro && (
             <Alert className="py-2 text-xs">
               <AlertDescription>
                 Abra esta página a partir do link enviado por e-mail. Se você chegou aqui direto, o
@@ -115,6 +140,7 @@ export default function ResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-9 pr-9 text-sm"
+                  minLength={SENHA_MINIMA}
                   required
                 />
                 <button
@@ -125,6 +151,9 @@ export default function ResetPassword() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <p className="text-xs text-slate-500">
+                A senha deve ter no mínimo {SENHA_MINIMA} caracteres.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirmPassword" className="text-xs font-semibold text-slate-700">

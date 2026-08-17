@@ -3,6 +3,7 @@ import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { CheckCircle, Eye, EyeOff, Lock, Mail, User, ArrowRight, ArrowLeft } from 'lucide-react'
 import { BrandLogoStacked } from '@/components/ui/logo'
+import { SENHA_MINIMA } from '@/services/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -181,7 +182,7 @@ export default function Index() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-9 pr-9 text-sm"
-                      minLength={10}
+                      minLength={SENHA_MINIMA}
                       required
                     />
                     <button
@@ -194,7 +195,7 @@ export default function Index() {
                   </div>
                   {mode === 'signup' && (
                     <p className="text-xs text-slate-500">
-                      A senha deve ter no mínimo 10 caracteres.
+                      A senha deve ter no mínimo {SENHA_MINIMA} caracteres.
                     </p>
                   )}
                 </div>
