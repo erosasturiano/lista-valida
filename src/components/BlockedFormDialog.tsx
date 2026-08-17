@@ -82,7 +82,7 @@ export function BlockedFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <Ban className="w-4 h-4 text-indigo-600" /> Adicionar à lista de bloqueados
+            <Ban className="w-4 h-4 text-brand-blue-600" /> Adicionar à lista de bloqueados
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
@@ -141,7 +141,7 @@ export function BlockedFormDialog({
             size="sm"
             onClick={handleSave}
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+            className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs"
           >
             {saving ? 'Bloqueando...' : 'Bloquear contato'}
           </Button>

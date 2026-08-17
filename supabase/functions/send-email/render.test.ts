@@ -43,7 +43,14 @@ describe('renderSubject', () => {
 })
 
 describe('renderTrackedBody', () => {
+  // A funcao recebe os dois endpoints separados desde que o rastreamento
+  // passou a sair no dominio proprio (TRACKING_BASE_URL), e nao mais montado
+  // a partir de uma unica URL de functions.
   const functionsUrl = 'https://proj.functions.supabase.co'
+  const tracking = {
+    click: `${functionsUrl}/track-click`,
+    open: `${functionsUrl}/track-open`,
+  }
   const siteUrl = 'https://listavalida.com.br'
   const logId = 'log-123'
 
@@ -52,7 +59,7 @@ describe('renderTrackedBody', () => {
       { subject: '', body: 'Olá {nome},\nTudo bem?' },
       contact,
       logId,
-      functionsUrl,
+      tracking,
       siteUrl,
     )
 
@@ -64,11 +71,11 @@ describe('renderTrackedBody', () => {
       { subject: '', body: '<a href="https://exemplo.com/pagina">clique aqui</a>' },
       contact,
       logId,
-      functionsUrl,
+      tracking,
       siteUrl,
     )
 
-    const expectedHref = `${functionsUrl}/track-click?log=${logId}&url=${encodeURIComponent('https://exemplo.com/pagina')}`
+    const expectedHref = `${tracking.click}?log=${logId}&url=${encodeURIComponent('https://exemplo.com/pagina')}`
     expect(html).toContain(`href="${expectedHref}"`)
   })
 
@@ -77,7 +84,7 @@ describe('renderTrackedBody', () => {
       { subject: '', body: '<a href="https://a.com/x">a</a> <a href="https://b.com/y?z=1">b</a>' },
       contact,
       logId,
-      functionsUrl,
+      tracking,
       siteUrl,
     )
 
@@ -86,10 +93,10 @@ describe('renderTrackedBody', () => {
   })
 
   it('dado_qualquer_corpo_quando_renderiza_entao_injeta_o_pixel_de_abertura_com_o_log_id', () => {
-    const html = renderTrackedBody({ subject: '', body: 'oi' }, contact, logId, functionsUrl, siteUrl)
+    const html = renderTrackedBody({ subject: '', body: 'oi' }, contact, logId, tracking, siteUrl)
 
     expect(html).toContain(
-      `<img src="${functionsUrl}/track-open?log=${logId}" width="1" height="1" alt="" style="display:none;" />`,
+      `<img src="${tracking.open}?log=${logId}" width="1" height="1" alt="" style="display:none;" />`,
     )
   })
 
@@ -98,7 +105,7 @@ describe('renderTrackedBody', () => {
       { subject: '', body: 'Cancele em {link_descadastro}' },
       contact,
       logId,
-      functionsUrl,
+      tracking,
       siteUrl,
     )
 
@@ -120,7 +127,7 @@ describe('renderTrackedBody', () => {
       { subject: '', body: bodyComRodape },
       contact,
       logId,
-      functionsUrl,
+      tracking,
       siteUrl,
     )
 

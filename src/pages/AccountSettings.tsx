@@ -63,7 +63,7 @@ export default function AccountSettings() {
         <CardContent className="space-y-4">
           <div className="space-y-1">
             <Label className="text-xs font-semibold flex items-center gap-1.5">
-              <User className="w-3 h-3 text-indigo-500" /> Nome do Remetente
+              <User className="w-3 h-3 text-brand-blue-500" /> Nome do Remetente
             </Label>
             <Input
               value={senderName}
@@ -74,7 +74,7 @@ export default function AccountSettings() {
           </div>
           <div className="space-y-1">
             <Label className="text-xs font-semibold flex items-center gap-1.5">
-              <Mail className="w-3 h-3 text-indigo-500" /> E-mail do Remetente
+              <Mail className="w-3 h-3 text-brand-blue-500" /> E-mail do Remetente
             </Label>
             <SenderEmailInput value={senderEmail} onChange={setSenderEmail} />
             {fieldErrors.sender_email && (
@@ -84,7 +84,7 @@ export default function AccountSettings() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9"
+            className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs h-9"
           >
             {saving ? 'Salvando...' : 'Salvar Configurações'}
           </Button>
@@ -110,7 +110,7 @@ export default function AccountSettings() {
               variant="secondary"
               className={
                 user?.role === 'admin'
-                  ? 'bg-indigo-50 text-indigo-700 text-[10px]'
+                  ? 'bg-brand-blue-50 text-brand-blue-700 text-[10px]'
                   : 'bg-slate-100 text-slate-600 text-[10px]'
               }
             >

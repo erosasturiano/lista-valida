@@ -306,14 +306,14 @@ export default function Contacts() {
       </div>
 
       {/* Smart Semantic Search Card */}
-      <Card className="border-indigo-100 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/50 shadow-xs">
+      <Card className="border-brand-blue-100 bg-gradient-to-r from-brand-blue-50/80 via-white to-brand-navy-50/50 shadow-xs">
         <CardContent className="p-4">
           <form
             onSubmit={handleSmartSearch}
             className="flex flex-col sm:flex-row items-center gap-3"
           >
-            <div className="flex items-center gap-2 text-indigo-700 font-semibold text-xs shrink-0">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
+            <div className="flex items-center gap-2 text-brand-blue-700 font-semibold text-xs shrink-0">
+              <Sparkles className="w-4 h-4 text-brand-blue-600" />
               <span>Busca IA Semântica:</span>
             </div>
             <div className="relative flex-1 w-full">
@@ -321,7 +321,7 @@ export default function Contacts() {
                 placeholder='Ex: "gerentes de RH interessados em liderança e clima"'
                 value={smartSearch}
                 onChange={(e) => setSmartSearch(e.target.value)}
-                className="text-xs h-9 bg-white border-indigo-200 focus:ring-indigo-500 pr-8"
+                className="text-xs h-9 bg-white border-brand-blue-200 focus:ring-brand-blue-500 pr-8"
               />
               {smartSearch && (
                 <button
@@ -337,13 +337,13 @@ export default function Contacts() {
               type="submit"
               size="sm"
               disabled={searchingSmart}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-9 px-4 shrink-0 w-full sm:w-auto"
+              className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs h-9 px-4 shrink-0 w-full sm:w-auto"
             >
               {searchingSmart ? 'Buscando...' : 'Buscar IA'}
             </Button>
           </form>
           {smartHits !== null && (
-            <div className="mt-2 text-xs text-indigo-800 flex items-center justify-between bg-indigo-100/60 p-2 rounded-md">
+            <div className="mt-2 text-xs text-brand-blue-800 flex items-center justify-between bg-brand-blue-100/60 p-2 rounded-md">
               <span>
                 Resultado semântico: {smartHits.length} contatos com maior relevância encontrados
               </span>
@@ -498,7 +498,7 @@ export default function Contacts() {
               size="sm"
               onClick={handleBulkClassify}
               disabled={classifyingBatch}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1.5"
+              className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs h-8 gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>{classifyingBatch ? 'Classificando...' : 'Classificar com IA'}</span>
@@ -615,13 +615,13 @@ export default function Contacts() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-brand-blue-100 text-brand-blue-700 font-bold text-[11px] flex items-center justify-center shrink-0">
                         {contact.name.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <Link
                           to={`/contatos/${contact.id}`}
-                          className="font-bold text-xs text-slate-900 hover:text-indigo-600 block"
+                          className="font-bold text-xs text-slate-900 hover:text-brand-blue-600 block"
                         >
                           {contact.name}
                         </Link>
@@ -679,7 +679,7 @@ export default function Contacts() {
                       variant="secondary"
                       className={
                         contact.classification_status === 'Classificado'
-                          ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                          ? 'bg-brand-blue-50 text-brand-blue-700 font-semibold'
                           : contact.classification_status === 'Revisado'
                             ? 'bg-sky-50 text-sky-700 font-semibold'
                             : 'bg-slate-100 text-slate-600'
@@ -693,7 +693,7 @@ export default function Contacts() {
                       asChild
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-slate-500 hover:text-indigo-600"
+                      className="h-7 w-7 text-slate-500 hover:text-brand-blue-600"
                     >
                       <Link to={`/contatos/${contact.id}`}>
                         <Eye className="w-4 h-4" />
@@ -722,7 +722,7 @@ export default function Contacts() {
             <Card key={contact.id} className="p-4 space-y-3 border-slate-200 shadow-xs">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-brand-blue-100 text-brand-blue-700 font-bold text-xs flex items-center justify-center">
                     {contact.name.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
@@ -747,7 +747,7 @@ export default function Contacts() {
               <div className="flex flex-wrap gap-1.5 text-[10px]">
                 <Badge variant="secondary">{contact.rsvp || 'Aguardando'}</Badge>
                 <Badge variant="outline">{contact.role_category || 'Sem Categoria'}</Badge>
-                <Badge variant="secondary" className="bg-indigo-50 text-indigo-700">
+                <Badge variant="secondary" className="bg-brand-blue-50 text-brand-blue-700">
                   {contact.classification_status || 'Pendente'}
                 </Badge>
               </div>
@@ -797,7 +797,7 @@ export default function Contacts() {
               size="sm"
               onClick={handleSendBulkEmail}
               disabled={!selectedTemplateId || sendingBulkEmail}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+              className="bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-xs"
             >
               {sendingBulkEmail ? 'Enviando...' : 'Enviar'}
             </Button>

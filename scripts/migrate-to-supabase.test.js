@@ -1,20 +1,20 @@
 // Testes de scripts/migrate-to-supabase.js: deterministicUuid.
 //
-// BLOQUEADO (Red, não executável hoje) — dois motivos, não apenas falta de
-// export:
+// PULADO — o motivo mudou, o histórico fica registrado abaixo.
 //
-// 1. deterministicUuid() é uma função privada do módulo (sem `export`).
-// 2. O módulo tem efeito colateral no top-level: `requireEnv(...)` roda
-//    imediatamente na importação e chama `process.exit(1)` se as env vars
-//    (PB_URL, PB_ADMIN_EMAIL, ...) não estiverem definidas; e a última
-//    linha do arquivo chama `main().catch(...)` incondicionalmente, o que
-//    dispara autenticação real no PocketBase e escritas reais no Supabase
-//    (via service_role key) assim que o módulo é importado. Não há como
-//    importar este arquivo com segurança em um test runner sem, na melhor
-//    das hipóteses, sair do processo, e na pior, migrar dados de verdade
-//    contra um ambiente real. Por isso os testes abaixo estão com
-//    `.skip`: o corpo do `it` nunca roda, então o `import()` dinâmico
-//    dentro dele nunca é avaliado.
+// Bloqueios originais, ambos JÁ RESOLVIDOS:
+// 1. deterministicUuid() era privada -> hoje está exportada (ver o final de
+//    migrate-to-supabase.js).
+// 2. O módulo rodava `main()` e `requireEnv(...)` no top-level, o que
+//    disparava migração real só de importar -> hoje `main()` está atrás da
+//    guarda `isDirectRun` e as env vars são lidas dentro de `main()`.
+//
+// Bloqueio atual: o pacote `pocketbase` foi removido das dependências junto
+// com a Fase 7, e a primeira linha de migrate-to-supabase.js é
+// `import PocketBase from 'pocketbase'`. Importar o módulo agora falha na
+// resolução. O script fica como registro de como os dados foram migrados;
+// ele não tem mais de onde migrar. Para reativar estes testes basta
+// `pnpm add -D pocketbase` e trocar `it.skip` por `it`.
 //
 // MUDANÇA MÍNIMA PROPOSTA (não aplicada por este agente — só testes):
 //   a) `export function deterministicUuid(oldId) { ... }`
