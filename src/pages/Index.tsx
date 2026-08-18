@@ -63,7 +63,7 @@ export default function Index() {
 
         <div className="relative z-10 max-w-lg my-auto py-12">
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight text-white mb-4">
-            Automação de higienização de mailing para mailings (listas)
+            Organização e higienização de mailing para mailings (listas)
           </h1>{' '}
           <p className="text-slate-300 text-base leading-relaxed mb-8">
             Classifique cargos, identifique interesses reais e crie abordagens personalizadas com
