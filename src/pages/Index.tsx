@@ -75,7 +75,7 @@ export default function Index() {
               <div>
                 <h4 className="font-semibold text-sm text-white">Classificação por IA</h4>
                 <p className="text-xs text-slate-400">
-                  Normalização automática de seniority, interesses e demandas do perfil.
+                  Normalização automática de dados, interesses e demandas do perfil.
                 </p>
               </div>
             </div>

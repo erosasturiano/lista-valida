@@ -236,7 +236,7 @@ const GlassmorphicNavbar = () => {
 
   const links = [
     { label: 'Recursos', href: '#recursos' },
-    { label: 'Entregabilidade', href: '#entregabilidade' },
+    { label: 'Diferenciais', href: '#diferenciais' },
     { label: 'Como funciona', href: '#como-funciona' },
   ]
 
@@ -341,7 +341,7 @@ const RECURSOS = [
   {
     icon: Sparkles,
     title: 'Classificação por IA',
-    description: 'Normalização automática de seniority, interesses e demandas do perfil.',
+    description: 'Normalização automática de dados, interesses e demandas do perfil.',
   },
   {
     icon: Mail,
@@ -358,7 +358,7 @@ const RECURSOS = [
 // Capacidades reais da plataforma, no lugar das metricas de exemplo do
 // componente original. Nao ha numeros de marketing inventados aqui.
 const CAPACIDADES = [
-  { icon: ShieldCheck, valor: 'SPF · DKIM · DMARC', rotulo: 'Domínio autenticado' },
+  { icon: ShieldCheck, valor: 'E-mails Verificados', rotulo: 'Domínio autenticado' },
   { icon: Upload, valor: 'CSV e XLSX', rotulo: 'Importação de listas' },
   { icon: BarChart3, valor: 'Aberturas e cliques', rotulo: 'Relatório de entregas' },
   { icon: CheckCircle, valor: 'Sem custo', rotulo: 'Para começar' },
@@ -421,11 +421,11 @@ const HeroSection = ({
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-40 md:pt-52 pb-20 text-center">
         <div className="inline-flex items-center rounded-full bg-brand-blue/10 px-4 py-2 text-sm font-medium text-brand-blue mb-8">
           <Sparkles className="w-4 h-4 mr-2 text-brand-gold" />
-          Higienização de mailing com Inteligência Artificial
+          Higienização de mailing
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-brand-ink tracking-tight pb-4">
-          Higienize seus mailings e
+          Organize seus mailings e
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-navy block mt-2 pb-2">
             dispare e-mail rapidamente
           </span>
@@ -455,16 +455,16 @@ const HeroSection = ({
             size="lg"
             className="h-auto px-8 py-4 text-base bg-white text-brand-ink border-brand-ink/15 shadow-sm hover:shadow-md hover:bg-white transition-all duration-300"
           >
-            <a href="#recursos">
+            <a href="#como-funciona">
               <CheckCircle className="w-5 h-5 mr-2 text-brand-blue" />
-              Ver recursos
+              Como funciona
             </a>
           </Button>
         </div>
 
         {/* Capacidades da plataforma */}
         <div
-          id="entregabilidade"
+          id="diferenciais"
           className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto scroll-mt-28"
         >
           {CAPACIDADES.map((item) => {
